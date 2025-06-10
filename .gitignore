@@ -30,3 +30,16 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+.DS_Store
+
+/bin/
+misspell*
+staticcheck*
+lint-project.sh
+gitleaks.tar.gz
+
+# code coverage
+coverage.html
+cover.out
+coverage.txt

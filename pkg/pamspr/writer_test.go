@@ -530,7 +530,7 @@ func TestWriter_formatFieldRightJustified(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := writer.formatFieldRightJustified(tt.value, tt.length, tt.padChar)
 			if result != tt.expected {
-				t.Errorf("formatFieldRightJustified(%q, %d, %q) = %q, want %q", 
+				t.Errorf("formatFieldRightJustified(%q, %d, %q) = %q, want %q",
 					tt.value, tt.length, tt.padChar, result, tt.expected)
 			}
 		})
@@ -785,12 +785,12 @@ func TestWriter_FieldPaddingEdgeCases(t *testing.T) {
 
 	// Test with maximum length values
 	maxString := strings.Repeat("A", 1000) // Much longer than any field
-	
+
 	result := writer.formatField(maxString, 10)
 	if len(result) != 10 {
 		t.Errorf("formatField with oversized input should truncate to exact length, got %d", len(result))
 	}
-	
+
 	result = writer.formatFieldRightJustified(maxString, 10, '0')
 	if len(result) != 10 {
 		t.Errorf("formatFieldRightJustified with oversized input should truncate to exact length, got %d", len(result))
@@ -873,17 +873,17 @@ func TestWriter_AllRecordTypes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			writer := NewWriter(&buf)
-			
+
 			err := tt.writer(writer, tt.record)
 			if err != nil {
 				t.Errorf("unexpected error writing %s: %v", tt.name, err)
 			}
-			
+
 			output := buf.String()
 			if len(strings.TrimSpace(output)) == 0 {
 				t.Errorf("no output for %s", tt.name)
 			}
-			
+
 			// Check line length
 			line := strings.TrimSpace(output)
 			if len(line) != RecordLength {
