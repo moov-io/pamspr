@@ -1,34 +1,54 @@
-# pamspr go
-# PAM SPR Go
+# PAM SPR - Payment Automation Manager Standard Payment Request
 
-[![Go Version](https://img.shields.io/github/go-mod/go-version/moov-io/pamspr)](https://golang.org/doc/devel/release.html)
-[![Go Reference](https://pkg.go.dev/badge/github.com/moov-io/pamspr.svg)](https://pkg.go.dev/github.com/moov-io/pamspr)
+[![Apache 2 License](https://img.shields.io/badge/license-Apache2-blue.svg)](https://raw.githubusercontent.com/moov-io/pamspr/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/moov-io/pamspr)](https://goreportcard.com/report/github.com/moov-io/pamspr)
-[![CI](https://github.com/moov-io/pamspr/workflows/CI/badge.svg)](https://github.com/moov-io/pamspr/actions)
-[![Coverage](https://codecov.io/gh/moov-io/pamspr/branch/main/graph/badge.svg)](https://codecov.io/gh/moov-io/pamspr)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A comprehensive Go library for reading, writing, and validating **Payment Automation Manager (PAM) Standard Payment Request (SPR)** files used by the U.S. Treasury Bureau of the Fiscal Service.
+A Go library for reading, writing, and validating Payment Automation Manager (PAM) Standard Payment Request (SPR) files used by the U.S. Treasury Bureau of the Fiscal Service for federal agency payment processing.
 
-## 🚀 Features
+## Overview
 
-- **Complete SPR 5.0.2 Support** - Implements the full specification with all record types
-- **High Performance** - Process 50,000+ payments per second with minimal memory usage
-- **Comprehensive Validation** - Business rules, balancing, and SPR-specific validations
-- **Agency-Specific Support** - Built-in handling for IRS, SSA, VA, RRB, and CCC requirements
-- **Same Day ACH (SDA)** - Full support for SDA validation and processing
-- **CTX Payments** - Complete Corporate Trade Exchange payment handling
-- **Production Ready** - Thread-safe, well-tested, and extensively documented
+PAM SPR files are used by federal agencies to process various types of payments including:
 
-## 📦 Installation
+- **Salaries and Benefits**: Federal employee payroll, retirement, and benefit payments
+- **Vendor Payments**: Payments to contractors and service providers  
+- **Tax Refunds**: Individual and business tax refund processing
+- **Social Security**: SSA benefit payments and Medicare reimbursements
+- **Other Federal Payments**: Education loans, agricultural subsidies, and more
+
+The library supports both **ACH (Automated Clearing House)** and **Check** payment methods, with comprehensive validation for Same Day ACH requirements and agency-specific rules.
+
+## Features
+
+### Core Functionality
+- ✅ **Read PAM SPR Files**: Parse fixed-width 850-character records
+- ✅ **Write PAM SPR Files**: Generate compliant payment files with proper formatting  
+- ✅ **Validate Files**: Comprehensive validation including balancing and business rules
+- ✅ **ACH Support**: CCD, PPD, IAT, and CTX Standard Entry Class codes
+- ✅ **Check Support**: Paper check generation with customizable stubs
+- ✅ **Same Day ACH**: Validation for expedited ACH processing requirements
+
+### Advanced Features
+- ✅ **Agency-Specific Rules**: Built-in support for IRS, SSA, VA, RRB, and CCC agencies
+- ✅ **File Builder**: Fluent API for programmatic file construction
+- ✅ **Utility Functions**: Field formatting, amount conversion, address cleaning
+- ✅ **CLI Tool**: Command-line interface for file operations
+- ✅ **Comprehensive Testing**: Extensive test coverage with realistic scenarios
+
+## Installation
 
 ```bash
 go get github.com/moov-io/pamspr
 ```
 
-## 🏃 Quick Start
+Or install the CLI tool:
 
-### Reading an SPR File
+```bash
+go install github.com/moov-io/pamspr/cmd/pamspr@latest
+```
+
+## Quick Start
+
+### Reading a PAM SPR File
 
 ```go
 package main
@@ -42,6 +62,179 @@ import (
 )
 
 func main() {
+    // Open the file
+    file, err := os.Open("payments.spr")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer file.Close()
+
+    // Parse the file
+    reader := pamspr.NewReader(file)
+    pamFile, err := reader.Read()
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Display file information
+    fmt.Printf("Input System: %s\n", pamFile.Header.InputSystem)
+    fmt.Printf("Total Payments: %d\n", pamFile.Trailer.TotalCountPayments)
+    fmt.Printf("Total Amount: $%.2f\n", float64(pamFile.Trailer.TotalAmountPayments)/100)
+}
+```
+
+### Creating an ACH Payment File
+
+```go
+package main
+
+import (
+    "log"
+    "os"
+    
+    "github.com/moov-io/pamspr/pkg/pamspr"
+)
+
+func main() {
+    // Build file using fluent API
+    builder := pamspr.NewFileBuilder()
+    
+    file, err := builder.
+        WithHeader("MY_AGENCY_SYSTEM", "502", false).
+        StartACHSchedule("SCH001", "Salary", "12345678", "PPD").
+        AddACHPayment(&pamspr.ACHPayment{
+            AgencyAccountIdentifier:      "EMP001",
+            Amount:                       250000, // $2,500.00
+            AgencyPaymentTypeCode:        "S",
+            IsTOPOffset:                  "1",
+            PayeeName:                    "JOHN DOE",
+            PayeeAddressLine1:            "123 MAIN ST",
+            CityName:                     "WASHINGTON",
+            StateCodeText:                "DC",
+            PostalCode:                   "20001",
+            RoutingNumber:                "021000021",
+            AccountNumber:                "1234567890",
+            ACHTransactionCode:           "22", // Checking Credit
+            PaymentID:                    "PAY001",
+            TIN:                          "123456789",
+            PaymentRecipientTINIndicator: "1", // SSN
+        }).
+        Build()
+    
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Write to file
+    output, err := os.Create("ach_payments.spr")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer output.Close()
+
+    writer := pamspr.NewWriter(output)
+    if err := writer.Write(file); err != nil {
+        log.Fatal(err)
+    }
+    
+    fmt.Println("ACH payment file created successfully!")
+}
+```
+
+### Creating a Check Payment File
+
+```go
+package main
+
+import (
+    "log"
+    "os"
+    
+    "github.com/moov-io/pamspr/pkg/pamspr"
+)
+
+func main() {
+    builder := pamspr.NewFileBuilder()
+    
+    file, err := builder.
+        WithHeader("CHECK_SYSTEM", "502", false).
+        StartCheckSchedule("CHK001", "Vendor", "87654321", "stub").
+        AddCheckPayment(&pamspr.CheckPayment{
+            AgencyAccountIdentifier:      "VEND001",
+            Amount:                       150000, // $1,500.00
+            AgencyPaymentTypeCode:        "V",
+            IsTOPOffset:                  "1",
+            PayeeName:                    "ACME CORP",
+            PayeeAddressLine1:            "789 BUSINESS BLVD",
+            PayeeAddressLine2:            "SUITE 100",
+            CityName:                     "NEW YORK",
+            StateCodeText:                "NY",
+            PostalCode:                   "10001",
+            CheckLegendText1:             "INVOICE #12345",
+            CheckLegendText2:             "PO #67890",
+            PaymentID:                    "CHK001",
+            TIN:                          "123456789",
+            PaymentRecipientTINIndicator: "2", // EIN
+            Stub: &pamspr.CheckStub{
+                RecordCode: "13",
+                PaymentID:  "CHK001",
+                PaymentIdentificationLines: [14]string{
+                    "Invoice Date: 01/15/2024",
+                    "Invoice Number: 12345",
+                    "Purchase Order: 67890",
+                    "Description: Office Supplies",
+                    "",
+                    "Item Details:",
+                    "  Paper - 10 reams @ $50.00 = $500.00",
+                    "  Toner - 5 units @ $100.00 = $500.00",
+                    "  Misc Supplies = $500.00",
+                    "",
+                    "Subtotal: $1,500.00",
+                    "Tax: $0.00",
+                    "Total: $1,500.00",
+                    "",
+                },
+            },
+        }).
+        Build()
+    
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Write to file
+    output, err := os.Create("check_payments.spr")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer output.Close()
+
+    writer := pamspr.NewWriter(output)
+    if err := writer.Write(file); err != nil {
+        log.Fatal(err)
+    }
+    
+    fmt.Println("Check payment file created successfully!")
+}
+```
+
+## Validation
+
+The library includes comprehensive validation capabilities:
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+    "os"
+    
+    "github.com/moov-io/pamspr/pkg/pamspr"
+)
+
+func main() {
+    // Read file
     file, err := os.Open("payments.spr")
     if err != nil {
         log.Fatal(err)
@@ -49,273 +242,275 @@ func main() {
     defer file.Close()
 
     reader := pamspr.NewReader(file)
-    sprFile, err := reader.Read()
+    pamFile, err := reader.Read()
     if err != nil {
         log.Fatal(err)
     }
 
-    fmt.Printf("Agency: %s\n", sprFile.Header.InputSystem)
-    fmt.Printf("Schedules: %d\n", len(sprFile.Schedules))
-    
-    for _, schedule := range sprFile.Schedules {
-        fmt.Printf("Schedule %s: %d payments\n", 
-            schedule.Header.GetScheduleNumber(), 
-            len(schedule.Payments))
+    // Create validator
+    validator := pamspr.NewValidator()
+
+    // Validate file structure
+    if err := validator.ValidateFileStructure(pamFile); err != nil {
+        log.Printf("Structure validation failed: %v", err)
     }
+
+    // Validate balancing (totals match)
+    if err := validator.ValidateBalancing(pamFile); err != nil {
+        log.Printf("Balancing validation failed: %v", err)
+    }
+
+    // Validate Same Day ACH requirements
+    if err := validator.ValidateSameDayACH(pamFile); err != nil {
+        log.Printf("Same Day ACH validation failed: %v", err)
+    }
+
+    // Validate individual payments
+    for _, schedule := range pamFile.Schedules {
+        for _, payment := range schedule.GetPayments() {
+            if achPayment, ok := payment.(*pamspr.ACHPayment); ok {
+                if err := validator.ValidateACHPayment(achPayment); err != nil {
+                    log.Printf("ACH payment validation failed: %v", err)
+                }
+            }
+            if checkPayment, ok := payment.(*pamspr.CheckPayment); ok {
+                if err := validator.ValidateCheckPayment(checkPayment); err != nil {
+                    log.Printf("Check payment validation failed: %v", err)
+                }
+            }
+        }
+    }
+
+    fmt.Println("Validation completed!")
 }
 ```
 
-### Creating an SPR File
+## CLI Usage
 
-```go
-package main
+The included command-line tool provides easy file operations:
 
-import (
-    "os"
-    
-    "github.com/moov-io/pamspr/pkg/pamspr"
-)
-
-func main() {
-    // Create file with factory
-    factory := pamspr.NewPaymentFactory("PAYROLL")
-    
-    // Create ACH payment
-    payment := factory.CreateACHPayment(
-        "EMPLOYEE, JOHN",
-        "021000021",    // Routing number
-        "123456789",    // Account number  
-        250000,         // $2,500.00 (in cents)
-    )
-
-    // Build schedule and file structure
-    schedule := &pamspr.Schedule{
-        Type: "ACH",
-        Header: &pamspr.ACHScheduleHeader{
-            RecordCode:             "01",
-            ScheduleNumber:         "PAYROLL20241201",
-            PaymentTypeCode:        "Salary",
-            StandardEntryClassCode: "PPD",
-            AgencyLocationCode:     "12345678",
-        },
-        Payments: []*pamspr.Payment{payment},
-    }
-
-    file := &pamspr.File{
-        Header: &pamspr.FileHeader{
-            RecordCode:       "H ",
-            InputSystem:      "PAYROLL_SYSTEM",
-            SPRVersionNumber: "502",
-        },
-        Schedules: []*pamspr.Schedule{schedule},
-    }
-
-    // Write to file
-    output, _ := os.Create("output.spr")
-    defer output.Close()
-    
-    writer := pamspr.NewWriter(output)
-    writer.Write(file)
-}
-```
-
-### Validating an SPR File
-
-```go
-validator := pamspr.NewValidator(sprFile)
-errors := validator.ValidateFile()
-
-if len(errors) == 0 {
-    fmt.Println("✓ File validation passed!")
-} else {
-    for _, err := range errors {
-        fmt.Printf("✗ %s\n", err.Error())
-    }
-}
-```
-
-## 📚 Documentation
-
-| Resource | Description |
-|----------|-------------|
-| [API Reference](https://pkg.go.dev/github.com/moov-io/pamspr) | Complete API documentation |
-| [Examples](./examples/) | Working code examples |
-| [Validation Rules](./docs/validation-rules.md) | SPR validation requirements |
-| [Agency-Specific Guide](./docs/agency-specific.md) | IRS, SSA, VA, RRB, CCC handling |
-| [Performance Guide](./docs/performance.md) | Optimization and benchmarks |
-
-## 🛠️ CLI Tool
-
-Install the command-line tool for working with SPR files:
-
+### Validate a PAM SPR File
 ```bash
-go install github.com/moov-io/pamspr/cmd/spr-tool@latest
+pamspr -validate -input payments.spr
 ```
 
-### Usage Examples
-
+### Display File Information
 ```bash
-# Validate an SPR file
-spr-tool validate payments.spr
-
-# Get file information
-spr-tool info payments.spr
-
-# Convert SPR to JSON
-spr-tool convert payments.spr --format json
-
-# Validate with agency-specific rules
-spr-tool validate irs_refunds.spr --agency IRS
+pamspr -info -input payments.spr
 ```
 
-## 🏢 Agency-Specific Features
+### Create Sample Files
+```bash
+# Create sample ACH file
+pamspr -create ach -output sample_ach.spr
+
+# Create sample Check file
+pamspr -create check -output sample_check.spr
+```
+
+### Convert to JSON (Future Feature)
+```bash
+pamspr -convert -input payments.spr -output payments.json
+```
+
+## File Format Specifications
+
+PAM SPR files use a hierarchical structure with fixed-width records:
+
+### File Structure
+```
+File Header (H)
+├── Schedule Header (01=ACH, 11=Check)
+│   ├── Payment Record (02=ACH, 12=Check)
+│   │   ├── Addendum Records (03, 04) [Optional]
+│   │   ├── CARS TAS/BETC Records (G) [Optional]
+│   │   ├── Check Stub (13) [Check Only]
+│   │   └── DNP Record (DD) [Optional]
+│   └── Schedule Trailer (T)
+└── File Trailer (E)
+```
+
+### Record Types
+- **H**: File Header - Contains system information and processing flags
+- **01**: ACH Schedule Header - ACH-specific schedule information
+- **11**: Check Schedule Header - Check-specific schedule information  
+- **02**: ACH Payment Record - Individual ACH payment details
+- **12**: Check Payment Record - Individual check payment details
+- **03**: ACH Addendum - Additional payment information (80 chars)
+- **04**: CTX Addendum - Corporate Trade Exchange data (800 chars)
+- **13**: Check Stub - Check stub information with 14 lines of detail
+- **G**: CARS TAS/BETC - Government accounting classification
+- **DD**: DNP Record - Do Not Pay verification information
+- **T**: Schedule Trailer - Schedule totals and counts
+- **E**: File Trailer - File totals and counts
+
+### Key Constraints
+- **Fixed Length**: All records are exactly 850 characters
+- **Balancing Required**: File and schedule totals must match payment sums
+- **Sequential Processing**: Records must appear in hierarchical order
+- **Amount Format**: All amounts stored as cents (integers)
+
+## Agency-Specific Features
+
+The library includes specialized support for federal agencies:
 
 ### IRS (Internal Revenue Service)
-- Tax refund processing
-- Savings bonds orders
-- Custom reconcilement field parsing
-- Legacy account symbol derivation
+- Tax refund processing with reconcilement fields
+- Bond payment handling for Savings Bonds
+- Document locator number tracking
 
 ### SSA (Social Security Administration)  
-- Benefit payments with PSC codes
-- Automatic ALC derivation
-- Daily and monthly payment support
+- Benefit payment processing
+- Program service center codes
+- TIN indicator offset handling
 
 ### VA (Department of Veterans Affairs)
-- Education and compensation payments
-- Station and financial code handling
-- Check and ACH format support
+- Veteran benefit payments
+- Station code and financing code support
+- Policy number tracking
 
-### And more...
-Built-in support for RRB, CCC, and generic reconcilement formats.
+### RRB (Railroad Retirement Board)
+- Railroad retirement benefit processing
+- Specialized reconcilement parsing
 
-## 🚄 Performance
+### CCC (Commodity Credit Corporation)
+- Agricultural subsidy payments
+- Commodity-specific payment handling
 
-Benchmarks on Intel i7-10700K @ 3.80GHz:
+## Same Day ACH Support
 
-| Operation | Performance | Memory |
-|-----------|-------------|---------|
-| Read | 52,000 payments/sec | 45 MB/million payments |
-| Write | 41,000 payments/sec | 38 MB/million payments |
-| Validate | 31,000 payments/sec | 52 MB/million payments |
+The library fully supports Same Day ACH processing with validation for:
 
-## 🧪 Testing
+- **Amount Limits**: $1,000,000 per transaction limit enforcement
+- **Time Windows**: Processing deadline validation
+- **SEC Code Restrictions**: Supported Standard Entry Class codes
+- **Settlement Requirements**: Same-day settlement validation
+
+## Utility Functions
+
+The library provides helpful utilities for common operations:
+
+### Field Formatting
+```go
+fp := &pamspr.FieldPadding{}
+
+// Pad left with zeros
+padded := fp.PadLeft("123", 5, '0') // "00123"
+
+// Pad right with spaces  
+padded = fp.PadRight("ABC", 7, ' ') // "ABC    "
+
+// Extract and pad numeric values
+numeric := fp.PadNumeric("ABC123DEF", 5) // "00123"
+```
+
+### Amount Handling
+```go
+fu := &pamspr.FormatUtils{}
+
+// Convert cents to dollar string
+dollars := fu.FormatAmount(12345) // "123.45"
+
+// Parse dollar string to cents
+cents, err := fu.ParseAmount("$1,234.56") // 123456, nil
+```
+
+### Address Cleaning
+```go
+fu := &pamspr.FormatUtils{}
+
+// Clean problematic characters
+clean := fu.CleanAddress(`123 "Main" & <Company>`) // `123 'Main' + (Company)`
+```
+
+### TIN Formatting
+```go
+fu := &pamspr.FormatUtils{}
+
+// Format SSN
+ssn := fu.FormatTIN("123456789", "1") // "123-45-6789"
+
+// Format EIN  
+ein := fu.FormatTIN("123456789", "2") // "12-3456789"
+```
+
+## Testing
+
+Run the comprehensive test suite:
 
 ```bash
 # Run all tests
-make test
+go test ./...
 
-# Run with coverage
-make test-coverage
+# Run tests with coverage
+go test -cover ./...
 
-# Run benchmarks
-make benchmark
+# Run specific package tests
+go test ./pkg/pamspr/
 
-# Run linting
-make lint
+# Run specific test
+go test -run TestReaderParseFile ./pkg/pamspr/
+
+# Generate coverage report
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
 ```
 
-## 📋 Supported Record Types
+## Examples
 
-| Record | Code | Description | Status |
-|--------|------|-------------|---------|
-| File Header | H | File-level metadata | ✅ |
-| ACH Schedule Header | 01 | ACH schedule information | ✅ |
-| Check Schedule Header | 11 | Check schedule information | ✅ |
-| ACH Payment Data | 02 | ACH payment details | ✅ |
-| Check Payment Data | 12 | Check payment details | ✅ |
-| ACH Addenda | 03 | Standard addenda records | ✅ |
-| CTX Addenda | 04 | Corporate trade exchange | ✅ |
-| CARS TAS/BETC | G  | Treasury account symbols | ✅ |
-| Check Stub | 13 | Check stub information | ✅ |
-| DNP Record | DD | Do Not Pay data | ✅ |
-| Schedule Trailer | T  | Schedule control totals | ✅ |
-| File Trailer | E  | File control totals | ✅ |
+See the `examples/` directory for complete working examples:
 
-## ⚡ Same Day ACH Support
+```bash
+# Run example code
+go run examples/examples.go
+```
 
-Full support for Same Day ACH processing with automatic validation:
+The examples demonstrate:
+1. Creating ACH payment files with addenda and CARS records
+2. Creating check payment files with stubs
+3. Parsing and validating existing files  
+4. Same Day ACH validation scenarios
 
-- ✅ Amount limits ($1,000,000 maximum)
-- ✅ SEC code restrictions (no IAT)
-- ✅ Payment type validation
-- ✅ Processing window compliance
+## Contributing
 
-## 🏗️ Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please see our [contributing guidelines](CONTRIBUTING.md) for details.
 
 ### Development Setup
 
 ```bash
 # Clone the repository
 git clone https://github.com/moov-io/pamspr.git
-cd pam-spr-go
-
-# Install dependencies
-go mod download
+cd pamspr
 
 # Run tests
-make test
+go test ./...
 
-# Run linting
-make lint
+# Build CLI tool
+go build -o pamspr cmd/pamspr/main.go
+
+# Format code
+go fmt ./...
+
+# Run linter
+golangci-lint run
 ```
 
-### Code Quality Standards
+## License
 
-- ✅ Maintain >90% test coverage
-- ✅ Follow [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
-- ✅ Add documentation for public APIs
-- ✅ Include examples for new features
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
-## 📝 Examples
+## Support
 
-| Example | Description |
-|---------|-------------|
-| [Basic File Reading](./examples/basic/read_file/) | Simple SPR file parsing |
-| [File Creation](./examples/basic/write_file/) | Creating SPR files from scratch |
-| [Validation](./examples/basic/validate_file/) | Comprehensive validation |
-| [CTX Payments](./examples/advanced/ctx_payments/) | Corporate trade exchange |
-| [Same Day ACH](./examples/advanced/same_day_ach/) | SDA processing |
-| [Agency-Specific](./examples/advanced/agency_specific/) | IRS, SSA, VA examples |
+- **Documentation**: See inline code documentation and examples
+- **Issues**: Report bugs or request features via [GitHub Issues](https://github.com/moov-io/pamspr/issues)
+- **Community**: Join the [Moov Community](https://community.moov.io) for discussions
 
-## 🔄 Version Compatibility
+## Related Projects
 
-| SPR Version | Library Support | Status |
-|-------------|----------------|---------|
-| 5.0.2 | ✅ Full | Current |
-| 5.0.1 | ✅ Full | Legacy |
-| 4.x | ⚠️ Partial | Legacy |
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## ⚠️ Disclaimer
-
-This library is not officially endorsed by the U.S. Treasury Bureau of the Fiscal Service. It is an independent implementation of the published SPR specification for the Go programming community.
-
-## 🤝 Support
-
-- 📖 [Documentation](https://pkg.go.dev/github.com/moov-io/pamspr)
-- 🐛 [Issue Tracker](https://github.com/moov-io/pamspr/issues)
-- 💬 [Discussions](https://github.com/moov-io/pamspr/discussions)
-- 📧 [Email Support](mailto:support@moov.io)
-
-## 🎯 Roadmap
-
-- [ ] **v1.1.0** - XML export support
-- [ ] **v1.2.0** - REST API wrapper
-- [ ] **v1.3.0** - Real-time validation service
-- [ ] **v2.0.0** - SPR 6.x support (when available)
-
-## ⭐ Show Your Support
-
-Give a ⭐️ if this project helped you!
-
-[![Stargazers over time](https://starchart.cc/moov-io/pamspr.svg)](https://starchart.cc/moov-io/pamspr)
+- [moov-io/ach](https://github.com/moov-io/ach) - ACH file processing library
+- [moov-io/fed](https://github.com/moov-io/fed) - Federal Reserve routing number lookup
+- [moov-io/paygate](https://github.com/moov-io/paygate) - Payment gateway service
 
 ---
 
-**Built with ❤️ for the Go and federal payment processing community**
+**Disclaimer**: This library is not affiliated with the U.S. Treasury or any federal agency. It is an open-source implementation of the PAM SPR file format for integration purposes.
