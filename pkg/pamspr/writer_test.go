@@ -172,7 +172,7 @@ func TestWriter_Write_CompleteACHFile(t *testing.T) {
 		},
 		Trailer: &FileTrailer{
 			RecordCode:          "E ",
-			TotalCountRecords:   8, // H + 01 + 02 + 03 + G + DD + 02 + T + E = 9
+			TotalCountRecords:   9, // H + 01 + 02 + 03 + G + DD + 02 + T + E = 9
 			TotalCountPayments:  2,
 			TotalAmountPayments: 225000,
 		},
@@ -184,7 +184,7 @@ func TestWriter_Write_CompleteACHFile(t *testing.T) {
 	}
 
 	output := buf.String()
-	lines := strings.Split(strings.TrimSpace(output), "\n")
+	lines := strings.Split(strings.TrimRight(output, "\n"), "\n")
 
 	// Verify we have the correct number of lines
 	expectedLines := 9 // H + 01 + 02 + 03 + G + DD + 02 + T + E
@@ -343,7 +343,7 @@ func TestWriter_Write_CompleteCheckFile(t *testing.T) {
 	}
 
 	output := buf.String()
-	lines := strings.Split(strings.TrimSpace(output), "\n")
+	lines := strings.Split(strings.TrimRight(output, "\n"), "\n")
 
 	// Verify we have the correct number of lines
 	expectedLines := 7 // H + 11 + 12 + 13 + G + T + E
@@ -394,7 +394,7 @@ func TestWriter_Write_CTXAddendum(t *testing.T) {
 	}
 
 	output := buf.String()
-	line := strings.TrimSpace(output)
+	line := strings.TrimRight(output, "\n")
 
 	if len(line) != RecordLength {
 		t.Errorf("CTX addendum line has incorrect length: expected %d, got %d", RecordLength, len(line))
@@ -729,7 +729,7 @@ func TestWriter_Write_MixedSchedules(t *testing.T) {
 	}
 
 	output := buf.String()
-	lines := strings.Split(strings.TrimSpace(output), "\n")
+	lines := strings.Split(strings.TrimRight(output, "\n"), "\n")
 
 	if len(lines) != 8 {
 		t.Errorf("expected 8 lines, got %d", len(lines))
@@ -771,7 +771,7 @@ func TestWriter_Write_EmptySchedules(t *testing.T) {
 	}
 
 	output := buf.String()
-	lines := strings.Split(strings.TrimSpace(output), "\n")
+	lines := strings.Split(strings.TrimRight(output, "\n"), "\n")
 
 	if len(lines) != 2 {
 		t.Errorf("expected 2 lines (header and trailer), got %d", len(lines))
@@ -884,10 +884,13 @@ func TestWriter_AllRecordTypes(t *testing.T) {
 				t.Errorf("no output for %s", tt.name)
 			}
 
-			// Check line length
-			line := strings.TrimSpace(output)
-			if len(line) != RecordLength {
-				t.Errorf("%s: expected line length %d, got %d", tt.name, RecordLength, len(line))
+			// Check line length (don't trim spaces as padding is required)
+			lines := strings.Split(output, "\n")
+			if len(lines) > 0 && lines[0] != "" {
+				line := lines[0]
+				if len(line) != RecordLength {
+					t.Errorf("%s: expected line length %d, got %d", tt.name, RecordLength, len(line))
+				}
 			}
 		})
 	}

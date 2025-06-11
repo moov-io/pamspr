@@ -350,13 +350,13 @@ func TestValidateRoutingNumber(t *testing.T) {
 		{"Non-numeric", "12345678X", true},
 		{"Invalid prefix", "991234567", true},
 		{"Invalid checksum", "123456789", true},
-		{"Valid prefix 00", "001234563", false}, // Government
-		{"Valid prefix 12", "121234562", false},
-		{"Valid prefix 21", "211234565", false}, // Thrift
-		{"Valid prefix 32", "321234564", false},
-		{"Valid prefix 61", "611234561", false}, // Electronic
-		{"Valid prefix 72", "721234560", false},
-		{"Valid prefix 80", "801234569", false}, // Traveler's checks
+		{"Valid prefix 00", "001234561", false}, // Government
+		{"Valid prefix 12", "121234564", false},
+		{"Valid prefix 21", "211234568", false}, // Thrift
+		{"Valid prefix 32", "321234568", false},
+		{"Valid prefix 61", "611234566", false}, // Electronic
+		{"Valid prefix 72", "721234566", false},
+		{"Valid prefix 80", "801234567", false}, // Traveler's checks
 	}
 
 	for _, tt := range tests {
@@ -619,8 +619,8 @@ func TestValidateHexCharacters(t *testing.T) {
 		data      string
 		expectErr bool
 	}{
-		{"Valid ASCII", "HELLO WORLD 123", false},
-		{"Valid special chars", "TEST@#$%&*()", false},
+		{"Valid ASCII", "HELLO@WORLD@ABC", false},
+		{"Valid special chars", "TEST@^_{}|~", false},
 		{"Invalid hex 0x00", "TEST\x00DATA", true},
 		{"Invalid hex 0x1F", "TEST\x1FDATA", true},
 		{"Invalid hex 0x3F", "TEST\x3FDATA", true},

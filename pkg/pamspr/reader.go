@@ -298,13 +298,13 @@ func (r *Reader) parseACHPayment(line string) (*ACHPayment, error) {
 
 // parseCheckSchedule parses a check schedule
 func (r *Reader) parseCheckSchedule(headerLine string) (*CheckSchedule, error) {
-	// Similar to parseACHSchedule but for checks
+	// Parse header
 	header := &CheckScheduleHeader{
 		RecordCode:                r.extractField(headerLine, 1, 2),
 		ScheduleNumber:            r.extractField(headerLine, 3, 16),
 		PaymentTypeCode:           r.extractField(headerLine, 17, 41),
 		AgencyLocationCode:        r.extractField(headerLine, 42, 49),
-		CheckPaymentEnclosureCode: r.extractField(headerLine, 59, 68),
+		CheckPaymentEnclosureCode: strings.TrimSpace(r.extractField(headerLine, 59, 68)),
 	}
 
 	schedule := &CheckSchedule{
@@ -317,10 +317,78 @@ func (r *Reader) parseCheckSchedule(headerLine string) (*CheckSchedule, error) {
 		},
 	}
 
-	// Continue reading check payments...
-	// Implementation similar to ACH schedule parsing
+	// Read payments until schedule trailer
+	var currentPayment *CheckPayment
 
-	return schedule, nil
+	for {
+		line, ok := r.scanLine()
+		if !ok {
+			return nil, fmt.Errorf("unexpected end of file in check schedule")
+		}
+
+		recordCode := r.extractField(line, 1, 2)
+
+		switch recordCode {
+		case "12": // Check Payment
+			if currentPayment != nil {
+				schedule.Payments = append(schedule.Payments, currentPayment)
+			}
+			payment, err := r.parseCheckPayment(line)
+			if err != nil {
+				return nil, err
+			}
+			currentPayment = payment
+
+		case "13": // Check Stub
+			if currentPayment == nil {
+				return nil, fmt.Errorf("check stub without payment")
+			}
+			stub, err := r.parseCheckStub(line)
+			if err != nil {
+				return nil, err
+			}
+			currentPayment.Stub = stub
+
+		case "G ": // CARS TAS/BETC
+			if currentPayment == nil {
+				return nil, fmt.Errorf("CARS record without payment")
+			}
+			cars, err := r.parseCARSTASBETC(line)
+			if err != nil {
+				return nil, err
+			}
+			currentPayment.CARSTASBETC = append(currentPayment.CARSTASBETC, cars)
+
+		case "DD": // DNP
+			if currentPayment == nil {
+				return nil, fmt.Errorf("DNP record without payment")
+			}
+			dnp, err := r.parseDNP(line)
+			if err != nil {
+				return nil, err
+			}
+			currentPayment.DNP = dnp
+
+		case "T ": // Schedule Trailer
+			if currentPayment != nil {
+				schedule.Payments = append(schedule.Payments, currentPayment)
+			}
+			trailer, err := r.parseScheduleTrailer(line)
+			if err != nil {
+				return nil, err
+			}
+			schedule.Trailer = trailer
+			return schedule, nil
+
+		default:
+			// Put back for next schedule/file trailer
+			r.pushBackLine(line)
+			if currentPayment != nil {
+				schedule.Payments = append(schedule.Payments, currentPayment)
+			}
+			return schedule, nil
+		}
+	}
 }
 
 // Helper methods
@@ -402,4 +470,81 @@ func (r *Reader) parseFileTrailer(line string) (*FileTrailer, error) {
 		TotalCountPayments:  r.parseAmount(r.extractField(line, 21, 38)),
 		TotalAmountPayments: r.parseAmount(r.extractField(line, 39, 56)),
 	}, nil
+}
+
+// parseCheckPayment parses a check payment record
+func (r *Reader) parseCheckPayment(line string) (*CheckPayment, error) {
+	if len(line) != RecordLength {
+		return nil, fmt.Errorf("invalid record length")
+	}
+
+	// Calculate field positions based on the writer format
+	pos := 1
+	payment := &CheckPayment{
+		RecordCode:              r.extractField(line, pos, pos+1),                    // 1-2
+		AgencyAccountIdentifier: r.extractField(line, pos+2, pos+17),                // 3-18
+		Amount:                  r.parseAmount(r.extractField(line, pos+18, pos+27)), // 19-28
+		AgencyPaymentTypeCode:   r.extractField(line, pos+28, pos+28),               // 29-29
+		IsTOPOffset:             r.extractField(line, pos+29, pos+29),               // 30-30
+		PayeeName:               r.extractField(line, pos+30, pos+64),               // 31-65
+		PayeeAddressLine1:       r.extractField(line, pos+65, pos+99),               // 66-100
+		PayeeAddressLine2:       r.extractField(line, pos+100, pos+134),             // 101-135
+		PayeeAddressLine3:       r.extractField(line, pos+135, pos+169),             // 136-170
+		PayeeAddressLine4:       r.extractField(line, pos+170, pos+204),             // 171-205
+		CityName:                r.extractField(line, pos+205, pos+231),             // 206-232
+		StateName:               r.extractField(line, pos+232, pos+241),             // 233-242
+		StateCodeText:           r.extractField(line, pos+242, pos+243),             // 243-244
+		PostalCode:              r.extractField(line, pos+244, pos+248),             // 245-249
+		PostalCodeExtension:     r.extractField(line, pos+249, pos+253),             // 250-254
+		PostNetBarcodeDeliveryPoint: r.extractField(line, pos+254, pos+256),        // 255-257
+		// Skip 14 char filler (258-271)
+		CountryName:                  r.extractField(line, pos+271, pos+310),        // 272-311
+		ConsularCode:                 r.extractField(line, pos+311, pos+313),        // 312-314
+		CheckLegendText1:             r.extractField(line, pos+314, pos+368),        // 315-369
+		CheckLegendText2:             r.extractField(line, pos+369, pos+423),        // 370-424
+		PayeeIdentifierSecondary:     r.extractField(line, pos+424, pos+432),        // 425-433
+		PartyNameSecondary:           r.extractField(line, pos+433, pos+467),        // 434-468
+		PaymentID:                    r.extractField(line, pos+468, pos+487),        // 469-488
+		Reconcilement:                r.extractField(line, pos+488, pos+587),        // 489-588
+		SpecialHandling:              r.extractField(line, pos+588, pos+637),        // 589-638
+		TIN:                          r.extractField(line, pos+638, pos+646),        // 639-647
+		USPSIntelligentMailBarcode:   r.extractField(line, pos+647, pos+696),        // 648-697
+		PaymentRecipientTINIndicator: r.extractField(line, pos+697, pos+697),        // 698-698
+		SecondaryPayeeTINIndicator:   r.extractField(line, pos+698, pos+698),        // 699-699
+		AmountEligibleForOffset:      r.extractField(line, pos+699, pos+708),        // 700-709
+		SubPaymentTypeCode:           r.extractField(line, pos+709, pos+740),        // 710-741
+		PayerMechanism:               r.extractField(line, pos+741, pos+760),        // 742-761
+		PaymentDescriptionCode:       r.extractField(line, pos+761, pos+762),        // 762-763
+		// Skip 87 char filler (764-850)
+		CARSTASBETC: make([]*CARSTASBETC, 0),
+	}
+
+	// Validate payment
+	if err := r.validator.ValidateCheckPayment(payment); err != nil {
+		r.errors = append(r.errors, fmt.Errorf("line %d: %w", r.lineNum, err))
+	}
+
+	return payment, nil
+}
+
+// parseCheckStub parses a check stub record
+func (r *Reader) parseCheckStub(line string) (*CheckStub, error) {
+	if len(line) != RecordLength {
+		return nil, fmt.Errorf("invalid record length")
+	}
+
+	stub := &CheckStub{
+		RecordCode: r.extractField(line, 1, 2),    // 1-2
+		PaymentID:  r.extractField(line, 3, 22),   // 3-22
+	}
+
+	// Parse 14 payment identification lines of 55 chars each
+	pos := 23
+	for i := 0; i < 14; i++ {
+		stub.PaymentIdentificationLines[i] = r.extractField(line, pos, pos+54) // 55 chars each: pos to pos+54 (inclusive)
+		pos += 55
+	}
+	// Remaining chars are filler (58 chars)
+
+	return stub, nil
 }

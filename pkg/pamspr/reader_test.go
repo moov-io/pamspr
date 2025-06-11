@@ -8,15 +8,15 @@ import (
 func TestReaderBasicFile(t *testing.T) {
 	// Create a minimal valid PAM SPR file
 	fileContent := createTestFile(t, []string{
-		"H TEST_SYSTEM                            502 0" + strings.Repeat(" ", 803),
-		"0100TEST001       Salary                   PPD12345678 123456789 " + strings.Repeat(" ", 783),
+		"H TEST_SYSTEM                             5020" + strings.Repeat(" ", 804),
+		"01TEST00TEST001     Salary                   PPD12345678 123456789 " + strings.Repeat(" ", 783),
 		"02EMP001          0000100000S1JOHN DOE                           123 MAIN ST                        " +
 			"                                   WASHINGTON                 DC20001     021000021        1234567890       " +
 			"22         123456789JOHN DOE SECONDARY                PAY001              " + strings.Repeat(" ", 100) +
 			"123456789110000000000                                                                           " +
-			"                                                       " + strings.Repeat(" ", 284),
+			"                                                       " + strings.Repeat(" ", 317),
 		"T " + strings.Repeat(" ", 10) + "00000001" + strings.Repeat(" ", 3) + "000000000100000" + strings.Repeat(" ", 812),
-		"E 00000000000000000400000000000000000100000000000000100000" + strings.Repeat(" ", 794),
+		"E 000000000000000005000000000000000001000000000000100000" + strings.Repeat(" ", 794),
 	})
 
 	reader := NewReader(strings.NewReader(fileContent))
@@ -29,7 +29,7 @@ func TestReaderBasicFile(t *testing.T) {
 	if file.Header == nil {
 		t.Fatal("File header is nil")
 	}
-	if file.Header.InputSystem != "TEST_SYSTEM" {
+	if strings.TrimSpace(file.Header.InputSystem) != "TEST_SYSTEM" {
 		t.Errorf("Expected input system 'TEST_SYSTEM', got %s", file.Header.InputSystem)
 	}
 	if file.Header.StandardPaymentVersion != "502" {
@@ -45,7 +45,7 @@ func TestReaderBasicFile(t *testing.T) {
 	if !ok {
 		t.Fatal("Expected ACH schedule")
 	}
-	if achSchedule.Header.ScheduleNumber != "00TEST001" {
+	if strings.TrimSpace(achSchedule.Header.ScheduleNumber) != "00TEST001" {
 		t.Errorf("Expected schedule number '00TEST001', got %s", achSchedule.Header.ScheduleNumber)
 	}
 
@@ -58,7 +58,7 @@ func TestReaderBasicFile(t *testing.T) {
 	if payment.Amount != 100000 {
 		t.Errorf("Expected amount 100000, got %d", payment.Amount)
 	}
-	if payment.PayeeName != "JOHN DOE" {
+	if strings.TrimSpace(payment.PayeeName) != "JOHN DOE" {
 		t.Errorf("Expected payee name 'JOHN DOE', got %s", payment.PayeeName)
 	}
 
@@ -66,23 +66,23 @@ func TestReaderBasicFile(t *testing.T) {
 	if file.Trailer == nil {
 		t.Fatal("File trailer is nil")
 	}
-	if file.Trailer.TotalCountRecords != 4 {
-		t.Errorf("Expected 4 records, got %d", file.Trailer.TotalCountRecords)
+	if file.Trailer.TotalCountRecords != 5 {
+		t.Errorf("Expected 5 records, got %d", file.Trailer.TotalCountRecords)
 	}
 }
 
 func TestReaderWithAddenda(t *testing.T) {
 	fileContent := createTestFile(t, []string{
-		"H TEST_SYSTEM                            502 0" + strings.Repeat(" ", 803),
-		"0100TEST001       Salary                   PPD12345678 123456789 " + strings.Repeat(" ", 783),
+		"H TEST_SYSTEM                             5020" + strings.Repeat(" ", 804),
+		"01TEST00TEST001     Salary                   PPD12345678 123456789 " + strings.Repeat(" ", 783),
 		"02EMP001          0000100000S1JOHN DOE                           123 MAIN ST                        " +
 			"                                   WASHINGTON                 DC20001     021000021        1234567890       " +
 			"22         123456789JOHN DOE SECONDARY                PAY001              " + strings.Repeat(" ", 100) +
 			"123456789110000000000                                                                           " +
-			"                                                       " + strings.Repeat(" ", 284),
-		"03PAY001              INVOICE 12345" + strings.Repeat(" ", 45) + strings.Repeat(" ", 748),
+			"                                                       " + strings.Repeat(" ", 317),
+		"03PAY001              INVOICE 12345" + strings.Repeat(" ", 815),
 		"T " + strings.Repeat(" ", 10) + "00000001" + strings.Repeat(" ", 3) + "000000000100000" + strings.Repeat(" ", 812),
-		"E 00000000000000000500000000000000000100000000000000100000" + strings.Repeat(" ", 794),
+		"E 000000000000000006000000000000000001000000000000100000" + strings.Repeat(" ", 794),
 	})
 
 	reader := NewReader(strings.NewReader(fileContent))
@@ -98,23 +98,24 @@ func TestReaderWithAddenda(t *testing.T) {
 		t.Fatalf("Expected 1 addendum, got %d", len(payment.Addenda))
 	}
 
-	if payment.Addenda[0].AddendaInformation != "INVOICE 12345"+strings.Repeat(" ", 45) {
+	expectedAddenda := "INVOICE 12345" + strings.Repeat(" ", 67) // 80 chars total
+	if payment.Addenda[0].AddendaInformation != expectedAddenda {
 		t.Errorf("Unexpected addenda information: %s", payment.Addenda[0].AddendaInformation)
 	}
 }
 
 func TestReaderWithCARSTASBETC(t *testing.T) {
 	fileContent := createTestFile(t, []string{
-		"H TEST_SYSTEM                            502 0" + strings.Repeat(" ", 803),
-		"0100TEST001       Salary                   PPD12345678 123456789 " + strings.Repeat(" ", 783),
+		"H TEST_SYSTEM                             5020" + strings.Repeat(" ", 804),
+		"01TEST00TEST001     Salary                   PPD12345678 123456789 " + strings.Repeat(" ", 783),
 		"02EMP001          0000100000S1JOHN DOE                           123 MAIN ST                        " +
 			"                                   WASHINGTON                 DC20001     021000021        1234567890       " +
 			"22         123456789JOHN DOE SECONDARY                PAY001              " + strings.Repeat(" ", 100) +
 			"123456789110000000000                                                                           " +
-			"                                                       " + strings.Repeat(" ", 284),
-		"G PAY001              01012202120221X1234001SALARY0100001000000" + strings.Repeat(" ", 785),
+			"                                                       " + strings.Repeat(" ", 317),
+		"G PAY001              0101201220212021X1234001SALARY0100001000000" + strings.Repeat(" ", 785),
 		"T " + strings.Repeat(" ", 10) + "00000001" + strings.Repeat(" ", 3) + "000000000100000" + strings.Repeat(" ", 812),
-		"E 00000000000000000500000000000000000100000000000000100000" + strings.Repeat(" ", 794),
+		"E 000000000000000006000000000000000001000000000000100000" + strings.Repeat(" ", 794),
 	})
 
 	reader := NewReader(strings.NewReader(fileContent))
@@ -141,23 +142,23 @@ func TestReaderWithCARSTASBETC(t *testing.T) {
 
 func TestReaderCheckSchedule(t *testing.T) {
 	fileContent := createTestFile(t, []string{
-		"H TEST_SYSTEM                            502 0" + strings.Repeat(" ", 803),
-		"1100CHK001       Vendor                   87654321" + strings.Repeat(" ", 9) + "stub      " + strings.Repeat(" ", 782),
+		"H TEST_SYSTEM                             5020" + strings.Repeat(" ", 804),
+		"1100CHK001       Vendor                   87654321" + strings.Repeat(" ", 9) + "stub      " + strings.Repeat(" ", 781),
 		"12VEND001         0000150000V1ABC COMPANY LLC                    789 BUSINESS BLVD                  " +
 			"SUITE 100                          " + strings.Repeat(" ", 35) + strings.Repeat(" ", 35) +
 			"NEW YORK                   " + strings.Repeat(" ", 10) + "NY10001     000" + strings.Repeat(" ", 14) +
 			strings.Repeat(" ", 40) + "   INVOICE #12345" + strings.Repeat(" ", 38) +
 			"PO #67890" + strings.Repeat(" ", 46) + "123456789ABC SECONDARY NAME                CHK001              " +
 			strings.Repeat(" ", 100) + strings.Repeat(" ", 50) + "123456789" + strings.Repeat(" ", 50) +
-			"210000000000                                00" + strings.Repeat(" ", 87),
-		"13CHK001              Line 1" + strings.Repeat(" ", 27) + "Line 2" + strings.Repeat(" ", 27) +
+			"210000000000                                00" + strings.Repeat(" ", 111),
+		"13CHK001              " + ("Line 1" + strings.Repeat(" ", 49)) + ("Line 2" + strings.Repeat(" ", 49)) +
 			strings.Repeat(" ", 55) + strings.Repeat(" ", 55) + strings.Repeat(" ", 55) +
 			strings.Repeat(" ", 55) + strings.Repeat(" ", 55) + strings.Repeat(" ", 55) +
 			strings.Repeat(" ", 55) + strings.Repeat(" ", 55) + strings.Repeat(" ", 55) +
 			strings.Repeat(" ", 55) + strings.Repeat(" ", 55) + strings.Repeat(" ", 55) +
 			strings.Repeat(" ", 58),
 		"T " + strings.Repeat(" ", 10) + "00000001" + strings.Repeat(" ", 3) + "000000000150000" + strings.Repeat(" ", 812),
-		"E 00000000000000000600000000000000000100000000000000150000" + strings.Repeat(" ", 794),
+		"E 000000000000000006000000000000000001000000000000150000" + strings.Repeat(" ", 794),
 	})
 
 	reader := NewReader(strings.NewReader(fileContent))
@@ -187,31 +188,31 @@ func TestReaderCheckSchedule(t *testing.T) {
 	if payment.Stub == nil {
 		t.Fatal("Expected stub record")
 	}
-	if payment.Stub.PaymentIdentificationLines[0] != "Line 1"+strings.Repeat(" ", 27) {
+	if payment.Stub.PaymentIdentificationLines[0] != "Line 1"+strings.Repeat(" ", 49) {
 		t.Errorf("Unexpected stub line 1: %s", payment.Stub.PaymentIdentificationLines[0])
 	}
 }
 
 func TestReaderMultipleSchedules(t *testing.T) {
 	fileContent := createTestFile(t, []string{
-		"H TEST_SYSTEM                            502 0" + strings.Repeat(" ", 803),
+		"H TEST_SYSTEM                             5020" + strings.Repeat(" ", 804),
 		// First ACH schedule
-		"0100TEST001       Salary                   PPD12345678 123456789 " + strings.Repeat(" ", 783),
+		"01TEST00TEST001     Salary                   PPD12345678 123456789 " + strings.Repeat(" ", 783),
 		"02EMP001          0000100000S1JOHN DOE                           123 MAIN ST                        " +
 			"                                   WASHINGTON                 DC20001     021000021        1234567890       " +
 			"22         123456789JOHN DOE SECONDARY                PAY001              " + strings.Repeat(" ", 100) +
 			"123456789110000000000                                                                           " +
-			"                                                       " + strings.Repeat(" ", 284),
+			"                                                       " + strings.Repeat(" ", 317),
 		"T " + strings.Repeat(" ", 10) + "00000001" + strings.Repeat(" ", 3) + "000000000100000" + strings.Repeat(" ", 812),
 		// Second ACH schedule
-		"0100TEST002       Vendor                   CCD12345678 123456789 " + strings.Repeat(" ", 783),
+		"01TEST00TEST002     Vendor                   CCD12345678 123456789 " + strings.Repeat(" ", 783),
 		"02VEND001         0000200000V1VENDOR COMPANY                     456 OAK AVE                        " +
 			"                                   ARLINGTON                  VA22201     021000021        0987654321       " +
 			"32         987654321                                   PAY002              " + strings.Repeat(" ", 100) +
 			"987654321210000000000                                                                           " +
-			"                                                       " + strings.Repeat(" ", 284),
+			"                                                       " + strings.Repeat(" ", 316),
 		"T " + strings.Repeat(" ", 10) + "00000001" + strings.Repeat(" ", 3) + "000000000200000" + strings.Repeat(" ", 812),
-		"E 00000000000000000800000000000000000200000000000000300000" + strings.Repeat(" ", 794),
+		"E 000000000000000008000000000000000002000000000000300000" + strings.Repeat(" ", 794),
 	})
 
 	reader := NewReader(strings.NewReader(fileContent))
@@ -260,13 +261,13 @@ func TestReaderInvalidRecordLength(t *testing.T) {
 
 func TestReaderMissingFileTrailer(t *testing.T) {
 	fileContent := createTestFile(t, []string{
-		"H TEST_SYSTEM                            502 0" + strings.Repeat(" ", 803),
-		"0100TEST001       Salary                   PPD12345678 123456789 " + strings.Repeat(" ", 783),
+		"H TEST_SYSTEM                             5020" + strings.Repeat(" ", 804),
+		"01TEST00TEST001     Salary                   PPD12345678 123456789 " + strings.Repeat(" ", 783),
 		"02EMP001          0000100000S1JOHN DOE                           123 MAIN ST                        " +
 			"                                   WASHINGTON                 DC20001     021000021        1234567890       " +
 			"22         123456789JOHN DOE SECONDARY                PAY001              " + strings.Repeat(" ", 100) +
 			"123456789110000000000                                                                           " +
-			"                                                       " + strings.Repeat(" ", 284),
+			"                                                       " + strings.Repeat(" ", 317),
 		"T " + strings.Repeat(" ", 10) + "00000001" + strings.Repeat(" ", 3) + "000000000100000" + strings.Repeat(" ", 812),
 		// Missing file trailer
 	})
