@@ -6,6 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Go library for working with Payment Automation Manager (PAM) Standard Payment Request (SPR) files used by the U.S. Treasury. It handles reading, writing, and validating payment files for federal agencies processing salaries, benefits, refunds, and vendor payments.
 
+## Technical Specification
+
+The authoritative source of truth for the PAM SPR file format is defined in the document:
+`./docs/InputFileSpecifications-StandardPaymentRequest-5.0.2-v11.1.0-12-17-21.docx`
+
+All file parsing, data models, and validation rules should be implemented according to this specification document. When in doubt, refer to this document for the correct implementation details.
+
 ## Development Commands
 
 ```bash
