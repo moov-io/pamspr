@@ -36,13 +36,13 @@ func TestGetFieldDefinitions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run("Record_"+tt.recordCode, func(t *testing.T) {
 			fields := GetFieldDefinitions(tt.recordCode)
-			
+
 			if tt.shouldExist {
 				if fields == nil {
 					t.Errorf("Expected field definitions for record %s, got nil", tt.recordCode)
 					return
 				}
-				
+
 				if tt.expectedField != "" {
 					if _, exists := fields[tt.expectedField]; !exists {
 						t.Errorf("Expected field %s to exist in record %s", tt.expectedField, tt.recordCode)
@@ -176,7 +176,7 @@ func TestFieldPositionsNoOverlap(t *testing.T) {
 
 				for pos := field.Start; pos <= field.End; pos++ {
 					if existingField, exists := positionMap[pos]; exists {
-						t.Errorf("Position %d in record %s is used by both %s and %s", 
+						t.Errorf("Position %d in record %s is used by both %s and %s",
 							pos, recordCode, existingField, fieldName)
 					}
 					positionMap[pos] = fieldName
@@ -203,7 +203,7 @@ func TestNewFieldDef(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			field := NewFieldDef(tt.start, tt.length, tt.required)
-			
+
 			if field.Start != tt.start {
 				t.Errorf("Start: want %d, got %d", tt.start, field.Start)
 			}

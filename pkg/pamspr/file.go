@@ -2,6 +2,8 @@
 // Payment Automation Manager (PAM) Standard Payment Request (SPR) files
 package pamspr
 
+import "fmt"
+
 // RecordType represents the type of record in the file
 type RecordType string
 
@@ -159,7 +161,17 @@ func (s *ACHSchedule) GetACHPayments() []*ACHPayment {
 
 // Validate validates the ACH schedule
 func (s *ACHSchedule) Validate() error {
-	// TODO: Implement validation
+	if s.Header == nil {
+		return fmt.Errorf("ACH schedule header is required")
+	}
+	if len(s.Payments) == 0 {
+		return fmt.Errorf("ACH schedule must have at least one payment")
+	}
+	for i, payment := range s.Payments {
+		if err := payment.Validate(); err != nil {
+			return fmt.Errorf("payment %d validation failed: %w", i, err)
+		}
+	}
 	return nil
 }
 
@@ -215,7 +227,17 @@ func (s *CheckSchedule) GetCheckPayments() []*CheckPayment {
 
 // Validate validates the check schedule
 func (s *CheckSchedule) Validate() error {
-	// TODO: Implement validation
+	if s.Header == nil {
+		return fmt.Errorf("check schedule header is required")
+	}
+	if len(s.Payments) == 0 {
+		return fmt.Errorf("check schedule must have at least one payment")
+	}
+	for i, payment := range s.Payments {
+		if err := payment.Validate(); err != nil {
+			return fmt.Errorf("payment %d validation failed: %w", i, err)
+		}
+	}
 	return nil
 }
 
@@ -388,7 +410,15 @@ func (p *ACHPayment) SetDNP(dnp *DNPRecord) {
 
 // Validate validates the ACH payment
 func (p *ACHPayment) Validate() error {
-	// TODO: Implement validation
+	if p.Amount <= 0 {
+		return fmt.Errorf("ACH payment amount must be positive, got %d", p.Amount)
+	}
+	if p.PayeeName == "" {
+		return fmt.Errorf("ACH payment must have a payee name")
+	}
+	if p.PaymentID == "" {
+		return fmt.Errorf("ACH payment must have a payment ID")
+	}
 	return nil
 }
 
@@ -495,7 +525,15 @@ func (p *CheckPayment) SetDNP(dnp *DNPRecord) {
 
 // Validate validates the check payment
 func (p *CheckPayment) Validate() error {
-	// TODO: Implement validation
+	if p.Amount <= 0 {
+		return fmt.Errorf("check payment amount must be positive, got %d", p.Amount)
+	}
+	if p.PayeeName == "" {
+		return fmt.Errorf("check payment must have a payee name")
+	}
+	if p.PaymentID == "" {
+		return fmt.Errorf("check payment must have a payment ID")
+	}
 	return nil
 }
 

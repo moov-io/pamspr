@@ -110,9 +110,9 @@ func (p *CheckParser) ParseCheckStub(line string) (*CheckStub, error) {
 	}
 
 	// Parse 14 payment identification lines
-	lineFields := []string{"Line1", "Line2", "Line3", "Line4", "Line5", "Line6", "Line7", 
+	lineFields := []string{"Line1", "Line2", "Line3", "Line4", "Line5", "Line6", "Line7",
 		"Line8", "Line9", "Line10", "Line11", "Line12", "Line13", "Line14"}
-	
+
 	for i, lineField := range lineFields {
 		if field, exists := fields[lineField]; exists {
 			stub.PaymentIdentificationLines[i] = extractField(line, field)

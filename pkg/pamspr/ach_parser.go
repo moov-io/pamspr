@@ -101,7 +101,7 @@ func (p *ACHParser) ParseACHAddendum(line string) (*ACHAddendum, error) {
 	}
 
 	recordCode := extractFieldByPosition(line, 1, 2)
-	
+
 	var fields map[string]FieldDefinition
 	switch recordCode {
 	case "03":

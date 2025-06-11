@@ -21,11 +21,11 @@ func NewFieldFormatter(validator *Validator) *FieldFormatter {
 
 // FormatterConfig defines formatting options for a field
 type FormatterConfig struct {
-	FieldName    string
-	Length       int
-	Required     bool
-	FormatType   FieldFormatType
-	PadChar      rune
+	FieldName     string
+	Length        int
+	Required      bool
+	FormatType    FieldFormatType
+	PadChar       rune
 	Justification FieldJustification
 }
 
@@ -33,10 +33,10 @@ type FormatterConfig struct {
 type FieldFormatType string
 
 const (
-	FormatText     FieldFormatType = "text"     // Default text formatting
-	FormatNumeric  FieldFormatType = "numeric"  // Zero-padded numbers
-	FormatAmount   FieldFormatType = "amount"   // Currency amounts in cents
-	FormatFiller   FieldFormatType = "filler"   // Filler spaces
+	FormatText      FieldFormatType = "text"    // Default text formatting
+	FormatNumeric   FieldFormatType = "numeric" // Zero-padded numbers
+	FormatAmount    FieldFormatType = "amount"  // Currency amounts in cents
+	FormatFiller    FieldFormatType = "filler"  // Filler spaces
 	FormatNoJustify FieldFormatType = "nojust"  // No justification
 )
 
@@ -77,7 +77,7 @@ func (f *FieldFormatter) FormatRecord(record interface{}, recordCode string) (st
 	for i := 0; i < recordValue.NumField(); i++ {
 		field := recordValue.Field(i)
 		fieldType := recordType.Field(i)
-		
+
 		// Skip unexported fields
 		if !field.CanInterface() {
 			continue

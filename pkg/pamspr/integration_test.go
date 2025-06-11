@@ -104,7 +104,7 @@ func TestIntegrationFullFileRoundTrip(t *testing.T) {
 			lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
 			for i, line := range lines {
 				if len(line) != RecordLength {
-					t.Errorf("Line %d has incorrect length: expected %d, got %d", 
+					t.Errorf("Line %d has incorrect length: expected %d, got %d",
 						i+1, RecordLength, len(line))
 				}
 			}
@@ -157,7 +157,7 @@ func TestIntegrationValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			file := tt.createFile()
-			
+
 			var err error
 			// Use appropriate validation method based on error type
 			if tt.errType == "balance" {
@@ -165,7 +165,7 @@ func TestIntegrationValidation(t *testing.T) {
 			} else {
 				err = validator.ValidateFileStructure(file)
 			}
-			
+
 			if tt.wantErr && err == nil {
 				t.Error("Expected validation error but got none")
 			}
@@ -184,11 +184,11 @@ func TestIntegrationFieldPositions(t *testing.T) {
 	for i := range line {
 		line[i] = ' ' // Fill with spaces first
 	}
-	
+
 	// Set specific fields at their correct positions
 	// RecordCode (1-2)
 	copy(line[0:2], "02")
-	// AgencyAccountIdentifier (3-18) 
+	// AgencyAccountIdentifier (3-18)
 	copy(line[2:18], "ACC123456789012 ")
 	// Amount (19-28)
 	copy(line[18:28], "0000150000")
@@ -196,10 +196,10 @@ func TestIntegrationFieldPositions(t *testing.T) {
 	copy(line[30:65], "PAYEE NAME HERE                    ")
 	// RoutingNumber (187-195)
 	copy(line[186:195], "021000021")
-	
+
 	achLine := string(line)
 
-	parser := NewACHParser(nil)  // Disable validation for field position test
+	parser := NewACHParser(nil) // Disable validation for field position test
 	payment, err := parser.ParseACHPayment(achLine)
 	if err != nil {
 		t.Fatalf("Failed to parse ACH payment: %v", err)
@@ -335,21 +335,21 @@ func createTestCheckFile() *File {
 func createTestMixedFile() *File {
 	achFile := createTestACHFile()
 	checkSchedule := createTestCheckFile().Schedules[0]
-	
+
 	// Add check schedule to ACH file
 	achFile.Schedules = append(achFile.Schedules, checkSchedule)
-	
+
 	// Update totals
-	achFile.Trailer.TotalCountRecords = 10   // H + 01 + 02 + 02 + T + 11 + 12 + 13 + T + E
+	achFile.Trailer.TotalCountRecords = 10 // H + 01 + 02 + 02 + T + 11 + 12 + 13 + T + E
 	achFile.Trailer.TotalCountPayments = 3
 	achFile.Trailer.TotalAmountPayments = 450000
-	
+
 	return achFile
 }
 
 func createTestACHWithAddenda() *File {
 	file := createTestACHFile()
-	
+
 	// Add standard addendum
 	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
 		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[0]); ok {
@@ -362,7 +362,7 @@ func createTestACHWithAddenda() *File {
 			})
 		}
 	}
-	
+
 	// Add CTX addendum to second payment
 	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
 		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[1]); ok {
@@ -376,16 +376,16 @@ func createTestACHWithAddenda() *File {
 			})
 		}
 	}
-	
+
 	// Update record count
 	file.Trailer.TotalCountRecords = 8 // Added 2 addenda records
-	
+
 	return file
 }
 
 func createTestFileWithCARS() *File {
 	file := createTestACHFile()
-	
+
 	// Add CARS record
 	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
 		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[0]); ok {
@@ -408,16 +408,16 @@ func createTestFileWithCARS() *File {
 			})
 		}
 	}
-	
+
 	// Update record count
 	file.Trailer.TotalCountRecords = 7 // Added 1 CARS record
-	
+
 	return file
 }
 
 func createTestFileWithDNP() *File {
 	file := createTestACHFile()
-	
+
 	// Add DNP record
 	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
 		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[0]); ok {
@@ -428,17 +428,17 @@ func createTestFileWithDNP() *File {
 			})
 		}
 	}
-	
+
 	// Update record count
 	file.Trailer.TotalCountRecords = 7 // Added 1 DNP record
-	
+
 	return file
 }
 
 func createTestSameDayACHFile() *File {
 	file := createTestACHFile()
 	file.Header.IsRequestedForSameDayACH = "1"
-	
+
 	// Ensure amounts are under SDA limit
 	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
 		for _, payment := range achSchedule.GetPayments() {
@@ -447,7 +447,7 @@ func createTestSameDayACHFile() *File {
 			}
 		}
 	}
-	
+
 	return file
 }
 
@@ -467,7 +467,7 @@ func createTestLargeFile() *File {
 			TotalAmountPayments: 100000000, // $1M total
 		},
 	}
-	
+
 	// Create schedule with 1000 payments
 	schedule := &ACHSchedule{
 		Header: &ACHScheduleHeader{
@@ -488,7 +488,7 @@ func createTestLargeFile() *File {
 			},
 		},
 	}
-	
+
 	// Add 1000 payments
 	for i := 0; i < 1000; i++ {
 		schedule.Payments[i] = &ACHPayment{
@@ -502,10 +502,10 @@ func createTestLargeFile() *File {
 			PaymentID:               "PAY" + padLeft(fmt.Sprintf("%d", i), 17, '0'),
 		}
 	}
-	
+
 	file.Schedules = append(file.Schedules, schedule)
 	file.Trailer.TotalCountRecords = 1004 // H + 01 + 1000*02 + T + E
-	
+
 	return file
 }
 
@@ -554,35 +554,35 @@ func createMixedPaymentSchedule() *File {
 func validateFileStructure(t *testing.T, expected, actual *File) {
 	// Validate header (trim spaces for comparison since fixed-width format preserves padding)
 	if strings.TrimSpace(expected.Header.InputSystem) != strings.TrimSpace(actual.Header.InputSystem) {
-		t.Errorf("Header mismatch: expected %s, got %s", 
+		t.Errorf("Header mismatch: expected %s, got %s",
 			strings.TrimSpace(expected.Header.InputSystem), strings.TrimSpace(actual.Header.InputSystem))
 	}
-	
+
 	// Validate schedule count
 	if len(expected.Schedules) != len(actual.Schedules) {
-		t.Fatalf("Schedule count mismatch: expected %d, got %d", 
+		t.Fatalf("Schedule count mismatch: expected %d, got %d",
 			len(expected.Schedules), len(actual.Schedules))
 	}
-	
+
 	// Validate each schedule
 	for i, expectedSchedule := range expected.Schedules {
 		actualSchedule := actual.Schedules[i]
-		
+
 		// Check schedule type
 		if getScheduleType(expectedSchedule) != getScheduleType(actualSchedule) {
 			t.Errorf("Schedule %d type mismatch", i)
 		}
-		
+
 		// Validate payment count
 		expectedPayments := getPayments(expectedSchedule)
 		actualPayments := getPayments(actualSchedule)
-		
+
 		if len(expectedPayments) != len(actualPayments) {
 			t.Errorf("Schedule %d payment count mismatch: expected %d, got %d",
 				i, len(expectedPayments), len(actualPayments))
 		}
 	}
-	
+
 	// Validate trailer
 	if expected.Trailer.TotalCountPayments != actual.Trailer.TotalCountPayments {
 		t.Errorf("Trailer payment count mismatch: expected %d, got %d",

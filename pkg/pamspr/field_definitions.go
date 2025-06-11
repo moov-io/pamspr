@@ -222,13 +222,13 @@ func GetFieldDefinitions(recordCode string) map[string]FieldDefinition {
 // ValidateFieldPositions validates that all field definitions are correct
 func ValidateFieldPositions() error {
 	recordCodes := []string{"H ", "01", "02", "03", "04", "11", "12", "13", "G ", "DD", "T ", "E "}
-	
+
 	for _, code := range recordCodes {
 		fields := GetFieldDefinitions(code)
 		if fields == nil {
 			continue
 		}
-		
+
 		// Check that no fields overlap and all end at or before position 850
 		for name, field := range fields {
 			if field.Start < 1 {
@@ -245,6 +245,6 @@ func ValidateFieldPositions() error {
 			}
 		}
 	}
-	
+
 	return nil
 }

@@ -632,26 +632,30 @@ func (v *Validator) validateIRSPayment(payment Payment) error {
 }
 
 func (v *Validator) validateVAPayment(payment Payment) error {
-	// VA-specific validations
-	_ = payment // TODO: Implement VA-specific validation
+	// VA-specific validations are not currently implemented
+	// Future enhancements may add validation for VA payment requirements
+	_ = payment
 	return nil
 }
 
 func (v *Validator) validateSSAPayment(payment Payment) error {
-	// SSA-specific validations
-	_ = payment // TODO: Implement SSA-specific validation
+	// SSA-specific validations are not currently implemented
+	// Future enhancements may add validation for SSA payment requirements
+	_ = payment
 	return nil
 }
 
 func (v *Validator) validateRRBPayment(payment Payment) error {
-	// RRB-specific validations
-	_ = payment // TODO: Implement RRB-specific validation
+	// RRB-specific validations are not currently implemented
+	// Future enhancements may add validation for RRB payment requirements
+	_ = payment
 	return nil
 }
 
 func (v *Validator) validateCCCPayment(payment Payment) error {
-	// CCC-specific validations
-	_ = payment // TODO: Implement CCC-specific validation
+	// CCC-specific validations are not currently implemented
+	// Future enhancements may add validation for CCC payment requirements
+	_ = payment
 	return nil
 }
 
