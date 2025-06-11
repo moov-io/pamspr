@@ -644,8 +644,7 @@ func TestAgencyReconcilementParser_ParseIRSReconcilement(t *testing.T) {
 	}
 
 	// Test BONDS format (100 character string)
-	bondsRecon := strings.Repeat("0", 100)
-	bondsRecon = "2023" + "12" + "01" + "02" + "03" + "A" + "TEST" + "123" + "X" + "Y" + "Z" + strings.Repeat("A", 33) + "B" + strings.Repeat("C", 33) + strings.Repeat("0", 10)
+	bondsRecon := "2023" + "12" + "01" + "02" + "03" + "A" + "TEST" + "123" + "X" + "Y" + "Z" + strings.Repeat("A", 33) + "B" + strings.Repeat("C", 33) + strings.Repeat("0", 10)
 
 	result = arp.ParseIRSReconcilement(bondsRecon, "BONDS")
 
@@ -663,8 +662,7 @@ func TestAgencyReconcilementParser_ParseIRSReconcilement(t *testing.T) {
 	}
 
 	// Test standard format
-	standardRecon := strings.Repeat("0", 100)
-	standardRecon = "2023" + "12" + "01" + "02" + "03" + "A" + "TEST" + "123" + "X" + "Y" + "Z" + strings.Repeat("1", 14) + strings.Repeat("2", 10) + strings.Repeat("0", 53)
+	standardRecon := "2023" + "12" + "01" + "02" + "03" + "A" + "TEST" + "123" + "X" + "Y" + "Z" + strings.Repeat("1", 14) + strings.Repeat("2", 10) + strings.Repeat("0", 53)
 
 	result = arp.ParseIRSReconcilement(standardRecon, "STANDARD")
 

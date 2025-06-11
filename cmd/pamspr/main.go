@@ -231,7 +231,6 @@ func createSampleACHFile() *pamspr.File {
 			PaymentRecipientTINIndicator: "1",
 		}).
 		Build()
-
 	if err != nil {
 		log.Fatalf("Error building file: %v", err)
 	}
@@ -283,7 +282,6 @@ func createSampleCheckFile() *pamspr.File {
 			},
 		}).
 		Build()
-
 	if err != nil {
 		log.Fatalf("Error building file: %v", err)
 	}
