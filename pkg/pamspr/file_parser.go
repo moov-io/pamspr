@@ -1,37 +1,35 @@
-package parsers
+package pamspr
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/moov-io/pamspr/pkg/pamspr"
 )
 
 // FileParser handles parsing of file header and trailer records
 type FileParser struct {
-	validator *pamspr.Validator
+	validator *Validator
 }
 
 // NewFileParser creates a new file parser
-func NewFileParser(validator *pamspr.Validator) *FileParser {
+func NewFileParser(validator *Validator) *FileParser {
 	return &FileParser{
 		validator: validator,
 	}
 }
 
 // ParseFileHeader parses a file header record ("H ")
-func (p *FileParser) ParseFileHeader(line string) (*pamspr.FileHeader, error) {
-	if len(line) != pamspr.RecordLength {
-		return nil, fmt.Errorf("invalid record length: expected %d, got %d", pamspr.RecordLength, len(line))
+func (p *FileParser) ParseFileHeader(line string) (*FileHeader, error) {
+	if len(line) != RecordLength {
+		return nil, fmt.Errorf("invalid record length: expected %d, got %d", RecordLength, len(line))
 	}
 
-	fields := pamspr.GetFieldDefinitions("H ")
+	fields := GetFieldDefinitions("H ")
 	if fields == nil {
 		return nil, fmt.Errorf("no field definitions for file header")
 	}
 
-	header := &pamspr.FileHeader{
+	header := &FileHeader{
 		RecordCode:               extractField(line, fields["RecordCode"]),
 		InputSystem:              extractField(line, fields["InputSystem"]),
 		StandardPaymentVersion:   extractField(line, fields["StandardPaymentVersion"]),
@@ -49,17 +47,17 @@ func (p *FileParser) ParseFileHeader(line string) (*pamspr.FileHeader, error) {
 }
 
 // ParseFileTrailer parses a file trailer record ("E ")
-func (p *FileParser) ParseFileTrailer(line string) (*pamspr.FileTrailer, error) {
-	if len(line) != pamspr.RecordLength {
-		return nil, fmt.Errorf("invalid record length: expected %d, got %d", pamspr.RecordLength, len(line))
+func (p *FileParser) ParseFileTrailer(line string) (*FileTrailer, error) {
+	if len(line) != RecordLength {
+		return nil, fmt.Errorf("invalid record length: expected %d, got %d", RecordLength, len(line))
 	}
 
-	fields := pamspr.GetFieldDefinitions("E ")
+	fields := GetFieldDefinitions("E ")
 	if fields == nil {
 		return nil, fmt.Errorf("no field definitions for file trailer")
 	}
 
-	trailer := &pamspr.FileTrailer{
+	trailer := &FileTrailer{
 		RecordCode:          extractField(line, fields["RecordCode"]),
 		TotalCountRecords:   parseAmount(extractField(line, fields["TotalCountRecords"])),
 		TotalCountPayments:  parseAmount(extractField(line, fields["TotalCountPayments"])),
@@ -70,7 +68,7 @@ func (p *FileParser) ParseFileTrailer(line string) (*pamspr.FileTrailer, error) 
 }
 
 // Helper functions
-func extractField(line string, field pamspr.FieldDefinition) string {
+func extractField(line string, field FieldDefinition) string {
 	if field.Start > len(line) || field.End > len(line) {
 		return ""
 	}

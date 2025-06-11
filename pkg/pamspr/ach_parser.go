@@ -1,36 +1,33 @@
-package parsers
+package pamspr
 
 import (
 	"fmt"
-	"strings"
-
-	"github.com/moov-io/pamspr/pkg/pamspr"
 )
 
 // ACHParser handles parsing of ACH schedule and payment records
 type ACHParser struct {
-	validator *pamspr.Validator
+	validator *Validator
 }
 
 // NewACHParser creates a new ACH parser
-func NewACHParser(validator *pamspr.Validator) *ACHParser {
+func NewACHParser(validator *Validator) *ACHParser {
 	return &ACHParser{
 		validator: validator,
 	}
 }
 
 // ParseACHScheduleHeader parses an ACH schedule header record ("01")
-func (p *ACHParser) ParseACHScheduleHeader(line string) (*pamspr.ACHScheduleHeader, error) {
-	if len(line) != pamspr.RecordLength {
-		return nil, fmt.Errorf("invalid record length: expected %d, got %d", pamspr.RecordLength, len(line))
+func (p *ACHParser) ParseACHScheduleHeader(line string) (*ACHScheduleHeader, error) {
+	if len(line) != RecordLength {
+		return nil, fmt.Errorf("invalid record length: expected %d, got %d", RecordLength, len(line))
 	}
 
-	fields := pamspr.GetFieldDefinitions("01")
+	fields := GetFieldDefinitions("01")
 	if fields == nil {
 		return nil, fmt.Errorf("no field definitions for ACH schedule header")
 	}
 
-	header := &pamspr.ACHScheduleHeader{
+	header := &ACHScheduleHeader{
 		RecordCode:              extractField(line, fields["RecordCode"]),
 		AgencyACHText:           extractField(line, fields["AgencyACHText"]),
 		ScheduleNumber:          extractField(line, fields["ScheduleNumber"]),
@@ -44,17 +41,17 @@ func (p *ACHParser) ParseACHScheduleHeader(line string) (*pamspr.ACHScheduleHead
 }
 
 // ParseACHPayment parses an ACH payment record ("02")
-func (p *ACHParser) ParseACHPayment(line string) (*pamspr.ACHPayment, error) {
-	if len(line) != pamspr.RecordLength {
-		return nil, fmt.Errorf("invalid record length: expected %d, got %d", pamspr.RecordLength, len(line))
+func (p *ACHParser) ParseACHPayment(line string) (*ACHPayment, error) {
+	if len(line) != RecordLength {
+		return nil, fmt.Errorf("invalid record length: expected %d, got %d", RecordLength, len(line))
 	}
 
-	fields := pamspr.GetFieldDefinitions("02")
+	fields := GetFieldDefinitions("02")
 	if fields == nil {
 		return nil, fmt.Errorf("no field definitions for ACH payment")
 	}
 
-	payment := &pamspr.ACHPayment{
+	payment := &ACHPayment{
 		RecordCode:                   extractField(line, fields["RecordCode"]),
 		AgencyAccountIdentifier:      extractField(line, fields["AgencyAccountIdentifier"]),
 		Amount:                       parseAmount(extractField(line, fields["Amount"])),
@@ -87,8 +84,8 @@ func (p *ACHParser) ParseACHPayment(line string) (*pamspr.ACHPayment, error) {
 		SubPaymentTypeCode:           extractField(line, fields["SubPaymentTypeCode"]),
 		PayerMechanism:               extractField(line, fields["PayerMechanism"]),
 		PaymentDescriptionCode:       extractField(line, fields["PaymentDescriptionCode"]),
-		Addenda:                      make([]*pamspr.ACHAddendum, 0),
-		CARSTASBETC:                  make([]*pamspr.CARSTASBETC, 0),
+		Addenda:                      make([]*ACHAddendum, 0),
+		CARSTASBETC:                  make([]*CARSTASBETC, 0),
 	}
 
 	// Validate payment
@@ -102,19 +99,19 @@ func (p *ACHParser) ParseACHPayment(line string) (*pamspr.ACHPayment, error) {
 }
 
 // ParseACHAddendum parses an ACH addendum record ("03" or "04")
-func (p *ACHParser) ParseACHAddendum(line string) (*pamspr.ACHAddendum, error) {
-	if len(line) != pamspr.RecordLength {
-		return nil, fmt.Errorf("invalid record length: expected %d, got %d", pamspr.RecordLength, len(line))
+func (p *ACHParser) ParseACHAddendum(line string) (*ACHAddendum, error) {
+	if len(line) != RecordLength {
+		return nil, fmt.Errorf("invalid record length: expected %d, got %d", RecordLength, len(line))
 	}
 
 	recordCode := extractFieldByPosition(line, 1, 2)
 	
-	var fields map[string]pamspr.FieldDefinition
+	var fields map[string]FieldDefinition
 	switch recordCode {
 	case "03":
-		fields = pamspr.GetFieldDefinitions("03")
+		fields = GetFieldDefinitions("03")
 	case "04":
-		fields = pamspr.GetFieldDefinitions("04")
+		fields = GetFieldDefinitions("04")
 	default:
 		return nil, fmt.Errorf("invalid addendum record code: %s", recordCode)
 	}
@@ -123,7 +120,7 @@ func (p *ACHParser) ParseACHAddendum(line string) (*pamspr.ACHAddendum, error) {
 		return nil, fmt.Errorf("no field definitions for addendum record %s", recordCode)
 	}
 
-	addendum := &pamspr.ACHAddendum{
+	addendum := &ACHAddendum{
 		RecordCode:         extractField(line, fields["RecordCode"]),
 		PaymentID:          extractField(line, fields["PaymentID"]),
 		AddendaInformation: extractField(line, fields["AddendaInformation"]),
