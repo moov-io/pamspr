@@ -661,7 +661,7 @@ func TestWriter_Write_MixedSchedules(t *testing.T) {
 			RecordCode:               "H ",
 			InputSystem:              "MIXED SYSTEM",
 			StandardPaymentVersion:   "502",
-			IsRequestedForSameDayACH: "1", // Test same day ACH flag
+			IsRequestedForSameDayACH: "0", // Test mixed ACH and Check schedules
 		},
 		Schedules: []Schedule{
 			&ACHSchedule{

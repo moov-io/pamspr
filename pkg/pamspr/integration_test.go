@@ -68,8 +68,9 @@ func TestIntegrationFullFileRoundTrip(t *testing.T) {
 				t.Fatalf("Failed to write file: %v", err)
 			}
 
-			// Read back from buffer
-			reader := NewReader(&buf)
+			// Read back from buffer (make a copy since reading consumes the buffer)
+			bufCopy := bytes.NewReader(buf.Bytes())
+			reader := NewReader(bufCopy)
 			readFile, err := reader.Read()
 			if err != nil {
 				t.Fatalf("Failed to read file: %v", err)
@@ -157,8 +158,14 @@ func TestIntegrationValidation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			file := tt.createFile()
 			
-			// Test file structure validation
-			err := validator.ValidateFileStructure(file)
+			var err error
+			// Use appropriate validation method based on error type
+			if tt.errType == "balance" {
+				err = validator.ValidateBalancing(file)
+			} else {
+				err = validator.ValidateFileStructure(file)
+			}
+			
 			if tt.wantErr && err == nil {
 				t.Error("Expected validation error but got none")
 			}
@@ -455,7 +462,7 @@ func createTestLargeFile() *File {
 		Schedules: []Schedule{},
 		Trailer: &FileTrailer{
 			RecordCode:          "E ",
-			TotalCountRecords:   1002, // H + 1000 payments + E
+			TotalCountRecords:   1004, // H + 01 + 1000 payments + T + E
 			TotalCountPayments:  1000,
 			TotalAmountPayments: 100000000, // $1M total
 		},
@@ -497,7 +504,7 @@ func createTestLargeFile() *File {
 	}
 	
 	file.Schedules = append(file.Schedules, schedule)
-	file.Trailer.TotalCountRecords = 1003 // H + 01 + 1000*02 + T + E
+	file.Trailer.TotalCountRecords = 1004 // H + 01 + 1000*02 + T + E
 	
 	return file
 }

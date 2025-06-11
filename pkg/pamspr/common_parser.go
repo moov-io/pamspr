@@ -28,9 +28,19 @@ func (p *CommonParser) ParseCARSTASBETC(line string) (*CARSTASBETC, error) {
 	}
 
 	record := &CARSTASBETC{
-		RecordCode:                  extractField(line, fields["RecordCode"]),
-		PaymentID:                   extractField(line, fields["PaymentID"]),
-		AccountClassificationAmount: parseAmount(extractField(line, fields["AccountClassificationAmount"])),
+		RecordCode:                    extractField(line, fields["RecordCode"]),
+		PaymentID:                     extractFieldTrimmed(line, fields["PaymentID"]),
+		SubLevelPrefixCode:            extractFieldTrimmed(line, fields["SubLevelPrefixCode"]),
+		AllocationTransferAgencyID:    extractFieldTrimmed(line, fields["AllocationTransferAgencyID"]),
+		AgencyIdentifier:              extractFieldTrimmed(line, fields["AgencyIdentifier"]),
+		BeginningPeriodOfAvailability: extractFieldTrimmed(line, fields["BeginningPeriodOfAvailability"]),
+		EndingPeriodOfAvailability:    extractFieldTrimmed(line, fields["EndingPeriodOfAvailability"]),
+		AvailabilityTypeCode:          extractFieldTrimmed(line, fields["AvailabilityTypeCode"]),
+		MainAccountCode:               extractFieldTrimmed(line, fields["MainAccountCode"]),
+		SubAccountCode:                extractFieldTrimmed(line, fields["SubAccountCode"]),
+		BusinessEventTypeCode:         extractFieldTrimmed(line, fields["BusinessEventTypeCode"]),
+		AccountClassificationAmount:   parseAmount(extractField(line, fields["AccountClassificationAmount"])),
+		IsCredit:                      extractFieldTrimmed(line, fields["IsCredit"]),
 	}
 
 	return record, nil
@@ -49,7 +59,8 @@ func (p *CommonParser) ParseDNP(line string) (*DNPRecord, error) {
 
 	record := &DNPRecord{
 		RecordCode: extractField(line, fields["RecordCode"]),
-		DNPDetail:  extractField(line, fields["DNPDetail"]),
+		PaymentID:  extractFieldTrimmed(line, fields["PaymentID"]),
+		DNPDetail:  extractFieldTrimmed(line, fields["DNPDetail"]),
 	}
 
 	return record, nil

@@ -190,28 +190,28 @@ func TestNewFieldDef(t *testing.T) {
 	tests := []struct {
 		name     string
 		start    int
-		end      int
+		length   int
 		required bool
-		wantLen  int
+		wantEnd  int
 	}{
 		{"single char", 1, 1, true, 1},
 		{"two chars", 1, 2, true, 2},
-		{"ten chars", 10, 19, false, 10},
-		{"large field", 100, 199, false, 100},
+		{"ten chars", 10, 10, false, 19},
+		{"large field", 100, 100, false, 199},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			field := NewFieldDef(tt.start, tt.end, tt.required)
+			field := NewFieldDef(tt.start, tt.length, tt.required)
 			
 			if field.Start != tt.start {
 				t.Errorf("Start: want %d, got %d", tt.start, field.Start)
 			}
-			if field.End != tt.end {
-				t.Errorf("End: want %d, got %d", tt.end, field.End)
+			if field.End != tt.wantEnd {
+				t.Errorf("End: want %d, got %d", tt.wantEnd, field.End)
 			}
-			if field.Length != tt.wantLen {
-				t.Errorf("Length: want %d, got %d", tt.wantLen, field.Length)
+			if field.Length != tt.length {
+				t.Errorf("Length: want %d, got %d", tt.length, field.Length)
 			}
 			if field.Required != tt.required {
 				t.Errorf("Required: want %v, got %v", tt.required, field.Required)

@@ -99,6 +99,26 @@ func (v *Validator) ValidateFileStructure(file *File) error {
 		}
 	}
 
+	// Rule: Same Day ACH validation
+	if file.Header != nil && file.Header.IsRequestedForSameDayACH == "1" {
+		if err := v.ValidateSameDayACH(file); err != nil {
+			return err
+		}
+	}
+
+	// Rule: CTX payment validation
+	for _, schedule := range file.Schedules {
+		if achSchedule, ok := schedule.(*ACHSchedule); ok {
+			for _, payment := range achSchedule.Payments {
+				if achPayment, ok := payment.(*ACHPayment); ok {
+					if err := v.ValidateCTXAddendum(achPayment); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
 	return nil
 }
 

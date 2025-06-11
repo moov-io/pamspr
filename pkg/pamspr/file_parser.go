@@ -75,6 +75,10 @@ func extractField(line string, field FieldDefinition) string {
 	return line[field.Start-1 : field.End]
 }
 
+func extractFieldTrimmed(line string, field FieldDefinition) string {
+	return strings.TrimSpace(extractField(line, field))
+}
+
 func parseAmount(s string) int64 {
 	s = strings.TrimSpace(s)
 	if s == "" {
