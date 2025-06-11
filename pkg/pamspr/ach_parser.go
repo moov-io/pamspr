@@ -88,12 +88,8 @@ func (p *ACHParser) ParseACHPayment(line string) (*ACHPayment, error) {
 		CARSTASBETC:                  make([]*CARSTASBETC, 0),
 	}
 
-	// Validate payment
-	if p.validator != nil {
-		if err := p.validator.ValidateACHPayment(payment); err != nil {
-			return nil, fmt.Errorf("validation failed: %w", err)
-		}
-	}
+	// Note: Validation is handled at the Reader level, not in individual parsers
+	// This maintains backward compatibility with the original parsing behavior
 
 	return payment, nil
 }

@@ -35,15 +35,67 @@ type Schedule interface {
 	GetScheduleNumber() string
 	GetPaymentType() PaymentType
 	GetPayments() []Payment
+	GetTrailer() *ScheduleTrailer
+	SetTrailer(*ScheduleTrailer)
 	Validate() error
+}
+
+// ACHScheduleAccessor provides type-safe access to ACH schedule fields
+type ACHScheduleAccessor interface {
+	Schedule
+	GetHeader() *ACHScheduleHeader
+	SetHeader(*ACHScheduleHeader)
+	GetACHPayments() []*ACHPayment // Type-safe payment access
+}
+
+// CheckScheduleAccessor provides type-safe access to Check schedule fields
+type CheckScheduleAccessor interface {
+	Schedule
+	GetHeader() *CheckScheduleHeader
+	SetHeader(*CheckScheduleHeader)
+	GetCheckPayments() []*CheckPayment // Type-safe payment access
 }
 
 // Payment represents either an ACH or Check payment
 type Payment interface {
 	GetPaymentID() string
 	GetAmount() int64 // Amount in cents
+	SetAmount(int64)
 	GetPayeeName() string
+	GetRecordCode() string
+	GetPaymentType() PaymentType
 	Validate() error
+}
+
+// ACHPaymentAccessor provides type-safe access to ACH-specific fields
+type ACHPaymentAccessor interface {
+	Payment
+	GetRoutingNumber() string
+	SetRoutingNumber(string)
+	GetAccountNumber() string
+	SetAccountNumber(string)
+	GetStandardEntryClassCode() string
+	SetStandardEntryClassCode(string)
+	GetAddenda() []*ACHAddendum
+	SetAddenda([]*ACHAddendum)
+	AddAddendum(*ACHAddendum)
+	GetCARSTASBETC() []*CARSTASBETC
+	SetCARSTASBETC([]*CARSTASBETC)
+	AddCARSTASBETC(*CARSTASBETC)
+	GetDNP() *DNPRecord
+	SetDNP(*DNPRecord)
+}
+
+// CheckPaymentAccessor provides type-safe access to Check-specific fields
+type CheckPaymentAccessor interface {
+	Payment
+	GetCheckStub() *CheckStub
+	SetCheckStub(*CheckStub)
+	GetCARSTASBETC() []*CARSTASBETC
+	SetCARSTASBETC([]*CARSTASBETC)
+	AddCARSTASBETC(*CARSTASBETC)
+	GetDNP() *DNPRecord
+	SetDNP(*DNPRecord)
 }
 
 // BaseSchedule contains common schedule fields
@@ -76,6 +128,35 @@ func (s *ACHSchedule) GetPayments() []Payment {
 	return s.Payments
 }
 
+// GetTrailer returns the schedule trailer
+func (s *ACHSchedule) GetTrailer() *ScheduleTrailer {
+	return s.Trailer
+}
+
+// SetTrailer sets the schedule trailer
+func (s *ACHSchedule) SetTrailer(trailer *ScheduleTrailer) {
+	s.Trailer = trailer
+}
+
+// ACHScheduleAccessor interface implementation
+func (s *ACHSchedule) GetHeader() *ACHScheduleHeader {
+	return s.Header
+}
+
+func (s *ACHSchedule) SetHeader(header *ACHScheduleHeader) {
+	s.Header = header
+}
+
+func (s *ACHSchedule) GetACHPayments() []*ACHPayment {
+	payments := make([]*ACHPayment, 0, len(s.Payments))
+	for _, payment := range s.Payments {
+		if achPayment, ok := payment.(*ACHPayment); ok {
+			payments = append(payments, achPayment)
+		}
+	}
+	return payments
+}
+
 // Validate validates the ACH schedule
 func (s *ACHSchedule) Validate() error {
 	// TODO: Implement validation
@@ -101,6 +182,35 @@ func (s *CheckSchedule) GetPaymentType() PaymentType {
 // GetPayments returns the payments in the schedule
 func (s *CheckSchedule) GetPayments() []Payment {
 	return s.Payments
+}
+
+// GetTrailer returns the schedule trailer
+func (s *CheckSchedule) GetTrailer() *ScheduleTrailer {
+	return s.Trailer
+}
+
+// SetTrailer sets the schedule trailer
+func (s *CheckSchedule) SetTrailer(trailer *ScheduleTrailer) {
+	s.Trailer = trailer
+}
+
+// CheckScheduleAccessor interface implementation
+func (s *CheckSchedule) GetHeader() *CheckScheduleHeader {
+	return s.Header
+}
+
+func (s *CheckSchedule) SetHeader(header *CheckScheduleHeader) {
+	s.Header = header
+}
+
+func (s *CheckSchedule) GetCheckPayments() []*CheckPayment {
+	payments := make([]*CheckPayment, 0, len(s.Payments))
+	for _, payment := range s.Payments {
+		if checkPayment, ok := payment.(*CheckPayment); ok {
+			payments = append(payments, checkPayment)
+		}
+	}
+	return payments
 }
 
 // Validate validates the check schedule
@@ -199,9 +309,81 @@ func (p *ACHPayment) GetAmount() int64 {
 	return p.Amount
 }
 
+// SetAmount sets the amount in cents
+func (p *ACHPayment) SetAmount(amount int64) {
+	p.Amount = amount
+}
+
 // GetPayeeName returns the payee name
 func (p *ACHPayment) GetPayeeName() string {
 	return p.PayeeName
+}
+
+// GetRecordCode returns the record code
+func (p *ACHPayment) GetRecordCode() string {
+	return p.RecordCode
+}
+
+// GetPaymentType returns the payment type
+func (p *ACHPayment) GetPaymentType() PaymentType {
+	return PaymentTypeACH
+}
+
+// ACHPaymentAccessor interface implementation
+func (p *ACHPayment) GetRoutingNumber() string {
+	return p.RoutingNumber
+}
+
+func (p *ACHPayment) SetRoutingNumber(routingNumber string) {
+	p.RoutingNumber = routingNumber
+}
+
+func (p *ACHPayment) GetAccountNumber() string {
+	return p.AccountNumber
+}
+
+func (p *ACHPayment) SetAccountNumber(accountNumber string) {
+	p.AccountNumber = accountNumber
+}
+
+func (p *ACHPayment) GetStandardEntryClassCode() string {
+	return p.StandardEntryClassCode
+}
+
+func (p *ACHPayment) SetStandardEntryClassCode(code string) {
+	p.StandardEntryClassCode = code
+}
+
+func (p *ACHPayment) GetAddenda() []*ACHAddendum {
+	return p.Addenda
+}
+
+func (p *ACHPayment) SetAddenda(addenda []*ACHAddendum) {
+	p.Addenda = addenda
+}
+
+func (p *ACHPayment) AddAddendum(addendum *ACHAddendum) {
+	p.Addenda = append(p.Addenda, addendum)
+}
+
+func (p *ACHPayment) GetCARSTASBETC() []*CARSTASBETC {
+	return p.CARSTASBETC
+}
+
+func (p *ACHPayment) SetCARSTASBETC(cars []*CARSTASBETC) {
+	p.CARSTASBETC = cars
+}
+
+func (p *ACHPayment) AddCARSTASBETC(car *CARSTASBETC) {
+	p.CARSTASBETC = append(p.CARSTASBETC, car)
+}
+
+func (p *ACHPayment) GetDNP() *DNPRecord {
+	return p.DNP
+}
+
+func (p *ACHPayment) SetDNP(dnp *DNPRecord) {
+	p.DNP = dnp
 }
 
 // Validate validates the ACH payment
@@ -262,9 +444,53 @@ func (p *CheckPayment) GetAmount() int64 {
 	return p.Amount
 }
 
+// SetAmount sets the amount in cents
+func (p *CheckPayment) SetAmount(amount int64) {
+	p.Amount = amount
+}
+
 // GetPayeeName returns the payee name
 func (p *CheckPayment) GetPayeeName() string {
 	return p.PayeeName
+}
+
+// GetRecordCode returns the record code
+func (p *CheckPayment) GetRecordCode() string {
+	return p.RecordCode
+}
+
+// GetPaymentType returns the payment type
+func (p *CheckPayment) GetPaymentType() PaymentType {
+	return PaymentTypeCheck
+}
+
+// CheckPaymentAccessor interface implementation
+func (p *CheckPayment) GetCheckStub() *CheckStub {
+	return p.Stub
+}
+
+func (p *CheckPayment) SetCheckStub(stub *CheckStub) {
+	p.Stub = stub
+}
+
+func (p *CheckPayment) GetCARSTASBETC() []*CARSTASBETC {
+	return p.CARSTASBETC
+}
+
+func (p *CheckPayment) SetCARSTASBETC(cars []*CARSTASBETC) {
+	p.CARSTASBETC = cars
+}
+
+func (p *CheckPayment) AddCARSTASBETC(car *CARSTASBETC) {
+	p.CARSTASBETC = append(p.CARSTASBETC, car)
+}
+
+func (p *CheckPayment) GetDNP() *DNPRecord {
+	return p.DNP
+}
+
+func (p *CheckPayment) SetDNP(dnp *DNPRecord) {
+	p.DNP = dnp
 }
 
 // Validate validates the check payment
@@ -326,6 +552,40 @@ const (
 	PaymentTypeACH
 	PaymentTypeCheck
 )
+
+// Interface conversion utilities
+
+// AsACHPayment safely converts a Payment to ACHPaymentAccessor
+func AsACHPayment(payment Payment) (ACHPaymentAccessor, bool) {
+	if achPayment, ok := payment.(ACHPaymentAccessor); ok {
+		return achPayment, true
+	}
+	return nil, false
+}
+
+// AsCheckPayment safely converts a Payment to CheckPaymentAccessor
+func AsCheckPayment(payment Payment) (CheckPaymentAccessor, bool) {
+	if checkPayment, ok := payment.(CheckPaymentAccessor); ok {
+		return checkPayment, true
+	}
+	return nil, false
+}
+
+// AsACHSchedule safely converts a Schedule to ACHScheduleAccessor
+func AsACHSchedule(schedule Schedule) (ACHScheduleAccessor, bool) {
+	if achSchedule, ok := schedule.(ACHScheduleAccessor); ok {
+		return achSchedule, true
+	}
+	return nil, false
+}
+
+// AsCheckSchedule safely converts a Schedule to CheckScheduleAccessor
+func AsCheckSchedule(schedule Schedule) (CheckScheduleAccessor, bool) {
+	if checkSchedule, ok := schedule.(CheckScheduleAccessor); ok {
+		return checkSchedule, true
+	}
+	return nil, false
+}
 
 // StandardEntryClassCode represents ACH SEC codes
 type StandardEntryClassCode string

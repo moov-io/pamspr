@@ -88,6 +88,15 @@ func TestIntegrationFullFileRoundTrip(t *testing.T) {
 			// Compare outputs should be identical
 			if buf.String() != buf2.String() {
 				t.Error("Round-trip produced different output")
+				t.Logf("First write length: %d", len(buf.String()))
+				t.Logf("Second write length: %d", len(buf2.String()))
+				lines1 := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
+				lines2 := strings.Split(strings.TrimRight(buf2.String(), "\n"), "\n")
+				t.Logf("First write lines: %d", len(lines1))
+				t.Logf("Second write lines: %d", len(lines2))
+				if len(lines2) > 0 {
+					t.Logf("First line second write: %q (len=%d)", lines2[0], len(lines2[0]))
+				}
 			}
 
 			// Validate all records are 850 characters
@@ -162,9 +171,26 @@ func TestIntegrationValidation(t *testing.T) {
 
 // TestIntegrationFieldPositions verifies all field positions are correct
 func TestIntegrationFieldPositions(t *testing.T) {
-	// Test ACH payment field positions - create a valid 850-character line
-	achLine := strings.Repeat(" ", 850)
-	achLine = "02" + strings.Repeat(" ", 848)  // Start with record code and spaces
+	// Test ACH payment field positions - create a valid 850-character line with real data
+	// Use field positions to build the line properly
+	line := make([]byte, 850)
+	for i := range line {
+		line[i] = ' ' // Fill with spaces first
+	}
+	
+	// Set specific fields at their correct positions
+	// RecordCode (1-2)
+	copy(line[0:2], "02")
+	// AgencyAccountIdentifier (3-18) 
+	copy(line[2:18], "ACC123456789012 ")
+	// Amount (19-28)
+	copy(line[18:28], "0000150000")
+	// PayeeName (31-65)
+	copy(line[30:65], "PAYEE NAME HERE                    ")
+	// RoutingNumber (187-195)
+	copy(line[186:195], "021000021")
+	
+	achLine := string(line)
 
 	parser := NewACHParser(nil)  // Disable validation for field position test
 	payment, err := parser.ParseACHPayment(achLine)
@@ -318,22 +344,30 @@ func createTestACHWithAddenda() *File {
 	file := createTestACHFile()
 	
 	// Add standard addendum
-	file.Schedules[0].(*ACHSchedule).Payments[0].(*ACHPayment).Addenda = []*ACHAddendum{
-		{
-			RecordCode:         "03",
-			PaymentID:          "PAY001              ",
-			AddendaInformation: "INVOICE 12345 DATED 2024-01-01",
-		},
+	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
+		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[0]); ok {
+			achPayment.SetAddenda([]*ACHAddendum{
+				{
+					RecordCode:         "03",
+					PaymentID:          "PAY001              ",
+					AddendaInformation: "INVOICE 12345 DATED 2024-01-01",
+				},
+			})
+		}
 	}
 	
 	// Add CTX addendum to second payment
-	file.Schedules[0].(*ACHSchedule).Payments[1].(*ACHPayment).StandardEntryClassCode = "CTX"
-	file.Schedules[0].(*ACHSchedule).Payments[1].(*ACHPayment).Addenda = []*ACHAddendum{
-		{
-			RecordCode:         "04",
-			PaymentID:          "PAY002              ",
-			AddendaInformation: "ISA*00*          *00*          " + strings.Repeat("X", 768),
-		},
+	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
+		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[1]); ok {
+			achPayment.SetStandardEntryClassCode("CTX")
+			achPayment.SetAddenda([]*ACHAddendum{
+				{
+					RecordCode:         "04",
+					PaymentID:          "PAY002              ",
+					AddendaInformation: "ISA*00*          *00*          " + strings.Repeat("X", 768),
+				},
+			})
+		}
 	}
 	
 	// Update record count
@@ -346,22 +380,26 @@ func createTestFileWithCARS() *File {
 	file := createTestACHFile()
 	
 	// Add CARS record
-	file.Schedules[0].(*ACHSchedule).Payments[0].(*ACHPayment).CARSTASBETC = []*CARSTASBETC{
-		{
-			RecordCode:                    "G ",
-			PaymentID:                     "PAY001              ",
-			SubLevelPrefixCode:            "20",
-			AllocationTransferAgencyID:    "020",
-			AgencyIdentifier:              "020",
-			BeginningPeriodOfAvailability: "2024",
-			EndingPeriodOfAvailability:    "2024",
-			AvailabilityTypeCode:          "X",
-			MainAccountCode:               "1000",
-			SubAccountCode:                "000",
-			BusinessEventTypeCode:         "DISB0001",
-			AccountClassificationAmount:   100000,
-			IsCredit:                      "0",
-		},
+	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
+		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[0]); ok {
+			achPayment.SetCARSTASBETC([]*CARSTASBETC{
+				{
+					RecordCode:                    "G ",
+					PaymentID:                     "PAY001              ",
+					SubLevelPrefixCode:            "20",
+					AllocationTransferAgencyID:    "020",
+					AgencyIdentifier:              "020",
+					BeginningPeriodOfAvailability: "2024",
+					EndingPeriodOfAvailability:    "2024",
+					AvailabilityTypeCode:          "X",
+					MainAccountCode:               "1000",
+					SubAccountCode:                "000",
+					BusinessEventTypeCode:         "DISB0001",
+					AccountClassificationAmount:   100000,
+					IsCredit:                      "0",
+				},
+			})
+		}
 	}
 	
 	// Update record count
@@ -374,10 +412,14 @@ func createTestFileWithDNP() *File {
 	file := createTestACHFile()
 	
 	// Add DNP record
-	file.Schedules[0].(*ACHSchedule).Payments[0].(*ACHPayment).DNP = &DNPRecord{
-		RecordCode: "DD",
-		PaymentID:  "PAY001              ",
-		DNPDetail:  "DNP TEST DETAIL INFORMATION",
+	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
+		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[0]); ok {
+			achPayment.SetDNP(&DNPRecord{
+				RecordCode: "DD",
+				PaymentID:  "PAY001              ",
+				DNPDetail:  "DNP TEST DETAIL INFORMATION",
+			})
+		}
 	}
 	
 	// Update record count
@@ -391,10 +433,10 @@ func createTestSameDayACHFile() *File {
 	file.Header.IsRequestedForSameDayACH = "1"
 	
 	// Ensure amounts are under SDA limit
-	for _, payment := range file.Schedules[0].(*ACHSchedule).Payments {
-		if achPayment, ok := payment.(*ACHPayment); ok {
-			if achPayment.Amount > 100000000 { // $1M limit
-				achPayment.Amount = 99999999
+	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
+		for _, payment := range achSchedule.GetPayments() {
+			if payment.GetAmount() > 100000000 { // $1M limit
+				payment.SetAmount(99999999) // Clean interface usage!
 			}
 		}
 	}
@@ -463,7 +505,11 @@ func createTestLargeFile() *File {
 // Validation test helper functions
 func createFileWithInvalidRoutingNumber() *File {
 	file := createTestACHFile()
-	file.Schedules[0].(*ACHSchedule).Payments[0].(*ACHPayment).RoutingNumber = "123456789" // Invalid
+	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
+		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[0]); ok {
+			achPayment.SetRoutingNumber("123456789") // Invalid
+		}
+	}
 	return file
 }
 
@@ -499,10 +545,10 @@ func createMixedPaymentSchedule() *File {
 
 // Helper to validate file structure matches
 func validateFileStructure(t *testing.T, expected, actual *File) {
-	// Validate header
-	if expected.Header.InputSystem != actual.Header.InputSystem {
+	// Validate header (trim spaces for comparison since fixed-width format preserves padding)
+	if strings.TrimSpace(expected.Header.InputSystem) != strings.TrimSpace(actual.Header.InputSystem) {
 		t.Errorf("Header mismatch: expected %s, got %s", 
-			expected.Header.InputSystem, actual.Header.InputSystem)
+			strings.TrimSpace(expected.Header.InputSystem), strings.TrimSpace(actual.Header.InputSystem))
 	}
 	
 	// Validate schedule count
