@@ -221,29 +221,29 @@ func (s *CheckSchedule) Validate() error {
 
 // FileHeader represents the file header record
 type FileHeader struct {
-	RecordCode               string // "H "
-	InputSystem              string // 40 chars
-	StandardPaymentVersion   string // "502"
-	IsRequestedForSameDayACH string // "0" or "1"
+	RecordCode               string `pamspr:"RecordCode"`
+	InputSystem              string `pamspr:"InputSystem"`
+	StandardPaymentVersion   string `pamspr:"StandardPaymentVersion"`
+	IsRequestedForSameDayACH string `pamspr:"IsRequestedForSameDayACH"`
 }
 
 // FileTrailer represents the file trailer record
 type FileTrailer struct {
-	RecordCode          string // "E "
-	TotalCountRecords   int64  // 18 digits
-	TotalCountPayments  int64  // 18 digits
-	TotalAmountPayments int64  // 18 digits, amount in cents
+	RecordCode          string `pamspr:"RecordCode"`
+	TotalCountRecords   int64  `pamspr:"TotalCountRecords" format:"numeric"`
+	TotalCountPayments  int64  `pamspr:"TotalCountPayments" format:"numeric"`
+	TotalAmountPayments int64  `pamspr:"TotalAmountPayments" format:"numeric"`
 }
 
 // ACHScheduleHeader represents ACH schedule header record
 type ACHScheduleHeader struct {
-	RecordCode              string // "01"
-	AgencyACHText           string // 4 chars
-	ScheduleNumber          string // 14 chars
-	PaymentTypeCode         string // 25 chars
-	StandardEntryClassCode  string // 3 chars: CCD, PPD, IAT, CTX
-	AgencyLocationCode      string // 8 digits
-	FederalEmployerIDNumber string // 10 chars
+	RecordCode              string `pamspr:"RecordCode"`
+	AgencyACHText           string `pamspr:"AgencyACHText"`
+	ScheduleNumber          string `pamspr:"ScheduleNumber" format:"numeric"`
+	PaymentTypeCode         string `pamspr:"PaymentTypeCode"`
+	StandardEntryClassCode  string `pamspr:"StandardEntryClassCode"`
+	AgencyLocationCode      string `pamspr:"AgencyLocationCode" format:"numeric"`
+	FederalEmployerIDNumber string `pamspr:"FederalEmployerIDNumber"`
 }
 
 // CheckScheduleHeader represents check schedule header record

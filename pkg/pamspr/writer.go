@@ -10,14 +10,17 @@ import (
 type Writer struct {
 	w         io.Writer
 	validator *Validator
+	formatter *FieldFormatter
 	errors    []error
 }
 
 // NewWriter creates a new PAM SPR writer
 func NewWriter(w io.Writer) *Writer {
+	validator := NewValidator()
 	return &Writer{
 		w:         w,
-		validator: NewValidator(),
+		validator: validator,
+		formatter: NewFieldFormatter(validator),
 		errors:    make([]error, 0),
 	}
 }
@@ -51,12 +54,10 @@ func (w *Writer) Write(file *File) error {
 
 // writeFileHeader writes the file header record
 func (w *Writer) writeFileHeader(header *FileHeader) error {
-	line := w.formatField(header.RecordCode, 2) +
-		w.formatField(header.InputSystem, 40) +
-		w.formatField(header.StandardPaymentVersion, 3) +
-		w.formatField(header.IsRequestedForSameDayACH, 1) +
-		w.formatField("", 804) // Filler
-
+	line, err := w.formatter.FormatRecord(header, "H ")
+	if err != nil {
+		return fmt.Errorf("formatting file header: %w", err)
+	}
 	return w.writeLine(line)
 }
 
@@ -114,16 +115,10 @@ func (w *Writer) writeACHSchedule(schedule *ACHSchedule) error {
 
 // writeACHScheduleHeader writes an ACH schedule header record
 func (w *Writer) writeACHScheduleHeader(header *ACHScheduleHeader) error {
-	line := w.formatField(header.RecordCode, 2) +
-		w.formatField(header.AgencyACHText, 4) +
-		w.formatFieldRightJustified(header.ScheduleNumber, 14, '0') +
-		w.formatField(header.PaymentTypeCode, 25) +
-		w.formatField(header.StandardEntryClassCode, 3) +
-		w.formatNumeric(header.AgencyLocationCode, 8) +
-		w.formatField("", 1) + // Filler
-		w.formatField(header.FederalEmployerIDNumber, 10) +
-		w.formatField("", 783) // Filler
-
+	line, err := w.formatter.FormatRecord(header, "01")
+	if err != nil {
+		return fmt.Errorf("formatting ACH schedule header: %w", err)
+	}
 	return w.writeLine(line)
 }
 
@@ -339,12 +334,10 @@ func (w *Writer) writeScheduleTrailer(trailer *ScheduleTrailer) error {
 
 // writeFileTrailer writes the file trailer record
 func (w *Writer) writeFileTrailer(trailer *FileTrailer) error {
-	line := w.formatField(trailer.RecordCode, 2) +
-		w.formatNumeric(fmt.Sprintf("%d", trailer.TotalCountRecords), 18) +
-		w.formatNumeric(fmt.Sprintf("%d", trailer.TotalCountPayments), 18) +
-		w.formatAmount(trailer.TotalAmountPayments, 18) +
-		w.formatField("", 794) // Filler
-
+	line, err := w.formatter.FormatRecord(trailer, "E ")
+	if err != nil {
+		return fmt.Errorf("formatting file trailer: %w", err)
+	}
 	return w.writeLine(line)
 }
 
