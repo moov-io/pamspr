@@ -495,6 +495,25 @@ go fmt ./...
 golangci-lint run
 ```
 
+## Contributing & Future Work
+
+We welcome contributions to improve the PAM SPR library! Here are areas where help is particularly needed:
+
+### 🚀 **Planned Enhancements**
+
+**Agency-Specific Payment Validation** - Currently, the library includes validation stubs for major federal agencies (VA, SSA, RRB, CCC) but these return "not implemented". We need subject matter experts to help implement the specific validation rules for each agency.
+
+For detailed implementation plans and requirements, see [REFACTORING.md - Phase 5](REFACTORING.md#phase-5-department-specific-payment-validation).
+
+### 📋 **How to Contribute**
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/agency-validation`)
+3. Implement changes with comprehensive tests
+4. Run all tests and ensure 100% pass rate
+5. Submit a pull request with detailed description
+
+**Note**: Agency-specific validation will require coordination with federal agency SMEs to ensure compliance with current requirements.
+
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.

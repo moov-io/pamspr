@@ -126,8 +126,51 @@ This document tracks the refactoring effort to improve code maintainability and 
 | 2024-12-19 | Create centralized field definitions | Single source of truth for all 850-char records |
 | TBD | Use interfaces over concrete types | Future extensibility |
 
+## Future Enhancements
+
+### Phase 5: Department-Specific Payment Validation 🔮 **[PLANNED]**
+**Goal**: Implement comprehensive validation rules for federal agency payment requirements
+
+**Current State**: Basic validation stubs exist but return "not implemented"
+- `validateVAPayment()` - Veterans Affairs payment validation
+- `validateSSAPayment()` - Social Security Administration payment validation  
+- `validateRRBPayment()` - Railroad Retirement Board payment validation
+- `validateCCCPayment()` - Commodity Credit Corporation payment validation
+
+**Implementation Tasks**:
+- [ ] **VA (Veterans Affairs) Validation**:
+  - Validate station codes and fin codes in reconcilement fields
+  - Enforce VA-specific payment type requirements
+  - Validate policy numbers and appropriation codes
+  - Implement courtesy code validation for check payments
+
+- [ ] **SSA (Social Security Administration) Validation**:
+  - Validate program service center codes
+  - Enforce SSA payment ID code requirements
+  - Validate TIN indicator offset rules
+  - Implement SSA-specific reconcilement field parsing
+
+- [ ] **RRB (Railroad Retirement Board) Validation**:
+  - Validate railroad-specific beneficiary requirements
+  - Enforce RRB payment type constraints
+  - Implement railroad employee ID validation
+
+- [ ] **CCC (Commodity Credit Corporation) Validation**:
+  - Validate agricultural program codes
+  - Enforce commodity-specific payment rules
+  - Implement farm program compliance validation
+
+**Benefits**:
+- Enhanced compliance with federal agency requirements
+- Reduced payment processing errors and rejections
+- Improved audit trail and reporting capabilities
+- Better integration with agency-specific systems
+
+**Estimated Effort**: 2-3 weeks (requires coordination with agency SMEs)
+
 ## Resources
 
 - [Original Design Doc](CLAUDE.md)
 - [Test Coverage Report](coverage.html)
 - [Performance Benchmarks](benchmarks.txt)
+- [Agency-Specific Validation Requirements](https://fiscal.treasury.gov/pam-spr/) (External)
