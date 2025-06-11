@@ -135,11 +135,14 @@ func (f *FieldFormatter) formatFieldValue(value interface{}, fieldDef FieldDefin
 		return strings.Repeat(" ", config.Length), nil
 	case FormatNoJustify:
 		return f.formatFieldNoJustify(stringValue, config.Length), nil
-	default: // FormatText
+	case FormatText:
 		if config.Justification == JustifyRight {
 			return f.formatFieldRightJustified(stringValue, config.Length, config.PadChar), nil
 		}
 		return f.formatField(stringValue, config.Length), nil
+	default:
+		// This should never happen if all enum values are handled above
+		return "", fmt.Errorf("unknown format type: %s", config.FormatType)
 	}
 }
 
