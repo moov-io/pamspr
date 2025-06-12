@@ -168,6 +168,212 @@ This document tracks the refactoring effort to improve code maintainability and 
 
 **Estimated Effort**: 2-3 weeks (requires coordination with agency SMEs)
 
+### Phase 6: JSON/XML Export Implementation 📄 **[PLANNED]**
+**Goal**: Enable conversion of SPR files to modern data formats for integration and analysis
+
+**Current State**: CLI has `-convert` flag with TODO comment (cmd/pamspr/main.go:162)
+
+**Implementation Tasks**:
+- [ ] **JSON Export**:
+  - Design JSON schema that preserves all SPR data fields
+  - Implement marshaling for all record types
+  - Add proper field naming and nesting
+  - Support pretty-print and compact modes
+  - Handle special characters and encoding
+
+- [ ] **XML Export** (stretch goal):
+  - Create XML schema definition (XSD)
+  - Implement XML marshaling with proper namespaces
+  - Support attribute vs element representation
+  - Add XSLT for human-readable output
+
+- [ ] **Import Functionality**:
+  - Parse JSON back to SPR format
+  - Validate imported data against SPR rules
+  - Preserve field positioning and padding
+  - Handle data type conversions
+
+**Benefits**:
+- Modern API integration capabilities
+- Easier data analysis and reporting
+- Simplified testing with human-readable formats
+- Better interoperability with external systems
+
+**Estimated Effort**: 1 week
+
+### Phase 7: Comprehensive Test Data Generation 🧪 **[PLANNED]**
+**Goal**: Create synthetic test files since real SPR files are not publicly available
+
+**Current State**: Limited test data embedded in test files
+
+**Implementation Tasks**:
+- [ ] **Test Data Generator**:
+  - Create configurable test file generator
+  - Support all record types and payment methods
+  - Generate edge cases automatically
+  - Create agency-specific test scenarios
+
+- [ ] **Test Fixtures**:
+  - Create `testdata/` directory structure
+  - Generate files for each agency (IRS, VA, SSA, RRB, CCC)
+  - Include valid and invalid file examples
+  - Create multi-schedule bulk files
+
+- [ ] **Test Coverage Enhancement**:
+  - Add parser-specific test files (*_parser_test.go)
+  - Increase coverage from 71.4% to 90%+
+  - Add property-based testing for field formatting
+  - Create benchmark tests for large files
+
+**Benefits**:
+- Comprehensive test coverage without real data
+- Better edge case detection
+- Easier onboarding for new contributors
+- Validation of parser robustness
+
+**Estimated Effort**: 1 week
+
+### Phase 8: Streaming and Performance Optimization 🚀 **[PLANNED]**
+**Goal**: Handle very large SPR files efficiently with minimal memory usage
+
+**Current State**: Entire file loaded into memory
+
+**Implementation Tasks**:
+- [ ] **Streaming Reader**:
+  - Implement io.Reader-based parsing
+  - Process records as they're read
+  - Support partial file validation
+  - Add progress callbacks
+
+- [ ] **Batch Processing**:
+  - Process multiple files concurrently
+  - Implement worker pool pattern
+  - Add retry logic for failures
+  - Support directory-level operations
+
+- [ ] **Performance Optimization**:
+  - Add benchmarks for all major operations
+  - Optimize field parsing with byte operations
+  - Implement zero-allocation formatting
+  - Use sync.Pool for record recycling
+
+- [ ] **Memory Profiling**:
+  - Add pprof integration
+  - Identify memory hotspots
+  - Optimize string allocations
+  - Reduce GC pressure
+
+**Benefits**:
+- Handle gigabyte-sized files
+- Reduced memory footprint
+- Faster processing times
+- Better resource utilization
+
+**Estimated Effort**: 2 weeks
+
+### Phase 9: Enhanced Developer Experience 🛠️ **[PLANNED]**
+**Goal**: Make the library easier to use and integrate
+
+**Implementation Tasks**:
+- [ ] **Validation Service**:
+  - HTTP API for file validation
+  - WebSocket support for real-time validation
+  - Batch validation endpoints
+  - Detailed error reporting API
+
+- [ ] **Web-based Tools**:
+  - File viewer/validator UI
+  - Visual diff tool for SPR files
+  - Interactive field editor
+  - Format conversion interface
+
+- [ ] **Developer Tools**:
+  - Go module documentation site
+  - Interactive API examples
+  - Code generation for custom formats
+  - Migration tools from older PAM versions
+
+- [ ] **Integration Helpers**:
+  - Docker image with CLI tools
+  - GitHub Actions for CI/CD
+  - Pre-commit hooks for validation
+  - Terraform provider for infrastructure
+
+**Benefits**:
+- Lower barrier to entry
+- Faster development cycles
+- Better debugging capabilities
+- Easier deployment and operations
+
+**Estimated Effort**: 3-4 weeks
+
+### Phase 10: Real Treasury Test File Integration 📁 **[PENDING TREASURY APPROVAL]**
+**Goal**: Obtain and integrate real Treasury-approved SPR test files for comprehensive validation
+
+**Current State**: Using synthetic test files only; no access to real Treasury test data
+
+**Prerequisites**: 
+- Contact PAM.SAT@fiscal.treasury.gov for test data access
+- Obtain proper authorization and data use agreements
+- Receive Treasury-approved sample files
+
+**Implementation Tasks**:
+- [ ] **Treasury File Request**:
+  - Submit formal request to PAM.SAT@fiscal.treasury.gov
+  - Request test files for all agencies (IRS, VA, SSA, RRB, CCC)
+  - Obtain files with various payment types (ACH PPD/CCD/CTX, checks)
+  - Request both valid and invalid test files
+  - Get edge case files (maximum lengths, special characters)
+
+- [ ] **Test Infrastructure Enhancement**:
+  - Create `testdata/treasury/` directory structure
+  - Implement separate test suites for Treasury vs synthetic files
+  - Add file comparison utilities (Treasury vs synthetic parsing)
+  - Create validation reports comparing results
+
+- [ ] **Parser Robustness Testing**:
+  - Test all real files against current parser
+  - Identify discrepancies between synthetic and real data
+  - Fix any parsing issues found with real files
+  - Validate field formatting matches Treasury expectations
+  - Test edge cases that synthetic files may not cover
+
+- [ ] **Regression Testing**:
+  - Ensure real files produce same validation results as Treasury systems
+  - Test round-trip parsing (read → write → read) with real files
+  - Verify byte-for-byte accuracy in writer output
+  - Test performance with real file sizes and complexity
+
+- [ ] **Documentation Updates**:
+  - Document any differences found between synthetic and real files
+  - Update field formatting rules based on real file analysis
+  - Create best practices guide based on Treasury file patterns
+  - Update validation rules to match Treasury requirements
+
+**Benefits**:
+- Validates parser against real Treasury production data
+- Identifies edge cases not covered by synthetic files  
+- Ensures 100% compatibility with Treasury systems
+- Provides confidence for production use by federal agencies
+- Reveals any undocumented field usage patterns
+
+**Risk Mitigation**:
+- Treasury files may contain sensitive data requiring special handling
+- Real files may reveal format variations not in specification
+- May require code changes to handle Treasury-specific patterns
+- Could expose performance issues with production-size files
+
+**Success Criteria**:
+- All real Treasury files parse successfully 
+- Parser output matches Treasury validation results exactly
+- Round-trip parsing preserves all data perfectly
+- Performance meets Treasury processing requirements
+- No regressions in synthetic file handling
+
+**Estimated Effort**: 2-3 weeks (contingent on Treasury file availability)
+
+**Dependencies**: Treasury approval and file delivery timeline
+
 ## Resources
 
 - [Original Design Doc](CLAUDE.md)
