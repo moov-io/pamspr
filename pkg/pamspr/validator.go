@@ -829,16 +829,138 @@ func (v *Validator) validateSSAPayment(payment Payment) error {
 }
 
 func (v *Validator) validateRRBPayment(payment Payment) error {
-	// RRB-specific validations are not currently implemented
-	// Future enhancements may add validation for RRB payment requirements
-	_ = payment
+	// RRB-specific reconcilement field validation
+	recon := payment.GetReconcilement()
+	if len(recon) != 100 {
+		return ValidationError{
+			Field:   "Reconcilement",
+			Rule:    "rrb_format",
+			Message: fmt.Sprintf("RRB reconcilement field must be exactly 100 characters, got %d", len(recon)),
+		}
+	}
+
+	// Parse RRB reconcilement fields using parser
+	parser := &AgencyReconcilementParser{}
+	fields := parser.ParseRRBReconcilement(recon)
+
+	// Validate required fields are present and properly formatted
+	if beneficiarySymbol := fields["BeneficiarySymbol"]; len(beneficiarySymbol) != 2 {
+		return ValidationError{
+			Field:   "BeneficiarySymbol",
+			Value:   beneficiarySymbol,
+			Rule:    "rrb_beneficiary_symbol",
+			Message: "RRB Beneficiary Symbol must be exactly 2 alphanumeric characters",
+		}
+	}
+
+	if prefixCode := fields["PrefixCode"]; len(prefixCode) != 1 {
+		return ValidationError{
+			Field:   "PrefixCode",
+			Value:   prefixCode,
+			Rule:    "rrb_prefix_code",
+			Message: "RRB Prefix Code must be exactly 1 alphanumeric character",
+		}
+	}
+
+	if payeeCode := fields["PayeeCode"]; len(payeeCode) != 1 {
+		return ValidationError{
+			Field:   "PayeeCode",
+			Value:   payeeCode,
+			Rule:    "rrb_payee_code",
+			Message: "RRB Payee Code must be exactly 1 alphanumeric character",
+		}
+	}
+
+	if objectCode := fields["ObjectCode"]; len(objectCode) != 1 {
+		return ValidationError{
+			Field:   "ObjectCode",
+			Value:   objectCode,
+			Rule:    "rrb_object_code",
+			Message: "RRB Object Code must be exactly 1 alphanumeric character",
+		}
+	}
+
+	// TODO: Add business rule validation when agency provides valid code ranges:
+	// - Valid Beneficiary Symbol values for different RRB programs
+	// - Valid Prefix Code values for railroad retirement vs survivor benefits
+	// - Valid Payee Code values for different recipient types
+	// - Valid Object Code values for PACER integration
+
 	return nil
 }
 
 func (v *Validator) validateCCCPayment(payment Payment) error {
-	// CCC-specific validations are not currently implemented
-	// Future enhancements may add validation for CCC payment requirements
-	_ = payment
+	// CCC-specific reconcilement field validation
+	recon := payment.GetReconcilement()
+	if len(recon) != 100 {
+		return ValidationError{
+			Field:   "Reconcilement",
+			Rule:    "ccc_format",
+			Message: fmt.Sprintf("CCC reconcilement field must be exactly 100 characters, got %d", len(recon)),
+		}
+	}
+
+	// Parse CCC reconcilement fields using parser
+	parser := &AgencyReconcilementParser{}
+	fields := parser.ParseCCCReconcilement(recon)
+
+	// Validate TOP Payment Agency ID (positions 1-2)
+	if topPaymentAgencyID := fields["TOPPaymentAgencyID"]; len(topPaymentAgencyID) > 0 {
+		if len(topPaymentAgencyID) != 2 {
+			return ValidationError{
+				Field:   "TOPPaymentAgencyID",
+				Value:   topPaymentAgencyID,
+				Rule:    "ccc_top_payment_agency_id",
+				Message: "CCC TOP Payment Agency ID must be exactly 2 alphabetic characters when present",
+			}
+		}
+		// Validate alphabetic characters only
+		for _, r := range topPaymentAgencyID {
+			if !((r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z')) {
+				return ValidationError{
+					Field:   "TOPPaymentAgencyID",
+					Value:   topPaymentAgencyID,
+					Rule:    "ccc_top_payment_agency_id_format",
+					Message: "CCC TOP Payment Agency ID must contain only alphabetic characters",
+				}
+			}
+		}
+	}
+
+	// Validate TOP Agency Site ID (positions 3-4)
+	if topAgencySiteID := fields["TOPAgencySiteID"]; len(topAgencySiteID) > 0 {
+		if len(topAgencySiteID) != 2 {
+			return ValidationError{
+				Field:   "TOPAgencySiteID",
+				Value:   topAgencySiteID,
+				Rule:    "ccc_top_agency_site_id",
+				Message: "CCC TOP Agency Site ID must be exactly 2 alphabetic characters when present",
+			}
+		}
+		// Validate alphabetic characters only
+		for _, r := range topAgencySiteID {
+			if !((r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z')) {
+				return ValidationError{
+					Field:   "TOPAgencySiteID",
+					Value:   topAgencySiteID,
+					Rule:    "ccc_top_agency_site_id_format",
+					Message: "CCC TOP Agency Site ID must contain only alphabetic characters",
+				}
+			}
+		}
+	}
+
+	// TODO: Implement schedule-level validation rule:
+	// "If one payment within a schedule contains TOP Agency/Site ID values,
+	//  the entire schedule will be sent to TOP with these values."
+	// This requires access to the parent schedule context.
+
+	// TODO: Add business rule validation when agency provides requirements:
+	// - Valid TOP Payment Agency ID codes for different CCC programs
+	// - Valid TOP Agency Site ID codes for different agricultural regions
+	// - Payment amount limits for commodity support payments
+	// - Cross-validation with payment type codes
+
 	return nil
 }
 

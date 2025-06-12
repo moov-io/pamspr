@@ -223,6 +223,295 @@ func TestValidateSSAPayment(t *testing.T) {
 	}
 }
 
+// TestValidateRRBPayment tests Railroad Retirement Board payment validation
+func TestValidateRRBPayment(t *testing.T) {
+	validator := NewValidator()
+
+	// Test valid RRB payment with all required fields
+	validRRBRecon := "AB" + // BeneficiarySymbol (2 chars)
+		"C" + // PrefixCode (1 char)
+		"D" + // PayeeCode (1 char)
+		"E" + // ObjectCode (1 char)
+		strings.Repeat(" ", 95) // Filler (95 chars)
+
+	achPayment := &ACHPayment{
+		Reconcilement: validRRBRecon,
+	}
+	err := validator.validateRRBPayment(achPayment)
+	if err != nil {
+		t.Errorf("Unexpected error for valid RRB payment: %v", err)
+	}
+
+	// Test valid RRB check payment
+	checkPayment := &CheckPayment{
+		Reconcilement: validRRBRecon,
+	}
+	err = validator.validateRRBPayment(checkPayment)
+	if err != nil {
+		t.Errorf("Unexpected error for valid RRB check payment: %v", err)
+	}
+
+	// Test invalid reconcilement length
+	shortRecon := "ABCDE" // Only 5 characters
+	shortPayment := &ACHPayment{
+		Reconcilement: shortRecon,
+	}
+	err = validator.validateRRBPayment(shortPayment)
+	if err == nil {
+		t.Error("Expected error for short reconcilement field")
+	}
+	if !strings.Contains(err.Error(), "must be exactly 100 characters") {
+		t.Errorf("Expected length error, got: %v", err)
+	}
+
+	// Test missing Beneficiary Symbol (empty first 2 positions)
+	missingBeneficiaryRecon := "  " + // Empty BeneficiarySymbol (2 chars)
+		"C" + // PrefixCode (1 char)
+		"D" + // PayeeCode (1 char)
+		"E" + // ObjectCode (1 char)
+		strings.Repeat(" ", 95) // Filler (95 chars)
+	missingBeneficiaryPayment := &ACHPayment{
+		Reconcilement: missingBeneficiaryRecon,
+	}
+	err = validator.validateRRBPayment(missingBeneficiaryPayment)
+	if err == nil {
+		t.Error("Expected error for missing Beneficiary Symbol")
+	}
+	if !strings.Contains(err.Error(), "Beneficiary Symbol must be exactly 2") {
+		t.Errorf("Expected Beneficiary Symbol error, got: %v", err)
+	}
+
+	// Test missing Prefix Code
+	missingPrefixRecon := "AB" + // BeneficiarySymbol (2 chars)
+		" " + // Empty PrefixCode (1 char)
+		"D" + // PayeeCode (1 char)
+		"E" + // ObjectCode (1 char)
+		strings.Repeat(" ", 95) // Filler (95 chars)
+	missingPrefixPayment := &ACHPayment{
+		Reconcilement: missingPrefixRecon,
+	}
+	err = validator.validateRRBPayment(missingPrefixPayment)
+	if err == nil {
+		t.Error("Expected error for missing Prefix Code")
+	}
+	if !strings.Contains(err.Error(), "Prefix Code must be exactly 1") {
+		t.Errorf("Expected Prefix Code error, got: %v", err)
+	}
+
+	// Test missing Payee Code
+	missingPayeeRecon := "AB" + // BeneficiarySymbol (2 chars)
+		"C" + // PrefixCode (1 char)
+		" " + // Empty PayeeCode (1 char)
+		"E" + // ObjectCode (1 char)
+		strings.Repeat(" ", 95) // Filler (95 chars)
+	missingPayeePayment := &ACHPayment{
+		Reconcilement: missingPayeeRecon,
+	}
+	err = validator.validateRRBPayment(missingPayeePayment)
+	if err == nil {
+		t.Error("Expected error for missing Payee Code")
+	}
+	if !strings.Contains(err.Error(), "Payee Code must be exactly 1") {
+		t.Errorf("Expected Payee Code error, got: %v", err)
+	}
+
+	// Test missing Object Code
+	missingObjectRecon := "AB" + // BeneficiarySymbol (2 chars)
+		"C" + // PrefixCode (1 char)
+		"D" + // PayeeCode (1 char)
+		" " + // Empty ObjectCode (1 char)
+		strings.Repeat(" ", 95) // Filler (95 chars)
+	missingObjectPayment := &ACHPayment{
+		Reconcilement: missingObjectRecon,
+	}
+	err = validator.validateRRBPayment(missingObjectPayment)
+	if err == nil {
+		t.Error("Expected error for missing Object Code")
+	}
+	if !strings.Contains(err.Error(), "Object Code must be exactly 1") {
+		t.Errorf("Expected Object Code error, got: %v", err)
+	}
+}
+
+// TestValidateCCCPayment tests Commodity Credit Corporation payment validation
+func TestValidateCCCPayment(t *testing.T) {
+	validator := NewValidator()
+
+	// Test valid CCC payment with TOP Payment Agency ID and Site ID
+	validCCCRecon := "AB" + // TOPPaymentAgencyID (2 chars)
+		"CD" + // TOPAgencySiteID (2 chars)
+		strings.Repeat(" ", 96) // Filler (96 chars)
+
+	achPayment := &ACHPayment{
+		Reconcilement: validCCCRecon,
+	}
+	err := validator.validateCCCPayment(achPayment)
+	if err != nil {
+		t.Errorf("Unexpected error for valid CCC payment: %v", err)
+	}
+
+	// Test valid CCC check payment
+	checkPayment := &CheckPayment{
+		Reconcilement: validCCCRecon,
+	}
+	err = validator.validateCCCPayment(checkPayment)
+	if err != nil {
+		t.Errorf("Unexpected error for valid CCC check payment: %v", err)
+	}
+
+	// Test CCC payment with empty TOP fields (should be valid)
+	emptyCCCRecon := "  " + // Empty TOPPaymentAgencyID (2 chars)
+		"  " + // Empty TOPAgencySiteID (2 chars)
+		strings.Repeat(" ", 96) // Filler (96 chars)
+	emptyPayment := &ACHPayment{
+		Reconcilement: emptyCCCRecon,
+	}
+	err = validator.validateCCCPayment(emptyPayment)
+	if err != nil {
+		t.Errorf("Unexpected error for CCC payment with empty TOP fields: %v", err)
+	}
+
+	// Test invalid reconcilement length
+	shortRecon := "ABCD" // Only 4 characters
+	shortPayment := &ACHPayment{
+		Reconcilement: shortRecon,
+	}
+	err = validator.validateCCCPayment(shortPayment)
+	if err == nil {
+		t.Error("Expected error for short reconcilement field")
+	}
+	if !strings.Contains(err.Error(), "must be exactly 100 characters") {
+		t.Errorf("Expected length error, got: %v", err)
+	}
+
+	// Test invalid TOP Payment Agency ID with numeric characters
+	invalidAgencyRecon := "A1" + // Invalid TOPPaymentAgencyID (contains numeric)
+		"CD" + // TOPAgencySiteID (2 chars)
+		strings.Repeat(" ", 96) // Filler (96 chars)
+	invalidAgencyPayment := &ACHPayment{
+		Reconcilement: invalidAgencyRecon,
+	}
+	err = validator.validateCCCPayment(invalidAgencyPayment)
+	if err == nil {
+		t.Error("Expected error for invalid TOP Payment Agency ID")
+	}
+	if !strings.Contains(err.Error(), "must contain only alphabetic characters") {
+		t.Errorf("Expected alphabetic character error, got: %v", err)
+	}
+
+	// Test invalid TOP Agency Site ID with numeric characters
+	invalidSiteRecon := "AB" + // TOPPaymentAgencyID (2 chars)
+		"C2" + // Invalid TOPAgencySiteID (contains numeric)
+		strings.Repeat(" ", 96) // Filler (96 chars)
+	invalidSitePayment := &ACHPayment{
+		Reconcilement: invalidSiteRecon,
+	}
+	err = validator.validateCCCPayment(invalidSitePayment)
+	if err == nil {
+		t.Error("Expected error for invalid TOP Agency Site ID")
+	}
+	if !strings.Contains(err.Error(), "must contain only alphabetic characters") {
+		t.Errorf("Expected alphabetic character error, got: %v", err)
+	}
+
+	// Test single character TOP Payment Agency ID (should fail)
+	singleCharAgencyRecon := "A" + // Single char TOPPaymentAgencyID (invalid length)
+		" " + // Pad to make position 2
+		"CD" + // TOPAgencySiteID (2 chars)
+		strings.Repeat(" ", 96) // Filler (96 chars)
+	singleCharPayment := &ACHPayment{
+		Reconcilement: singleCharAgencyRecon,
+	}
+	err = validator.validateCCCPayment(singleCharPayment)
+	if err == nil {
+		t.Error("Expected error for single character TOP Payment Agency ID")
+	}
+	if !strings.Contains(err.Error(), "must be exactly 2 alphabetic characters") {
+		t.Errorf("Expected length error for TOP Payment Agency ID, got: %v", err)
+	}
+}
+
+// TestParseRRBReconcilement tests RRB reconcilement parsing
+func TestParseRRBReconcilement(t *testing.T) {
+	parser := &AgencyReconcilementParser{}
+
+	// Test valid RRB reconcilement
+	validRecon := "AB" + // BeneficiarySymbol
+		"C" + // PrefixCode
+		"D" + // PayeeCode
+		"E" + // ObjectCode
+		strings.Repeat(" ", 95) // Filler
+
+	fields := parser.ParseRRBReconcilement(validRecon)
+
+	expectedFields := map[string]string{
+		"BeneficiarySymbol": "AB",
+		"PrefixCode":        "C",
+		"PayeeCode":         "D",
+		"ObjectCode":        "E",
+	}
+
+	for key, expected := range expectedFields {
+		if actual, exists := fields[key]; !exists {
+			t.Errorf("Missing field %s", key)
+		} else if actual != expected {
+			t.Errorf("Field %s: expected %s, got %s", key, expected, actual)
+		}
+	}
+
+	// Test invalid length reconcilement
+	shortRecon := "ABCDE"
+	shortFields := parser.ParseRRBReconcilement(shortRecon)
+	if len(shortFields) != 0 {
+		t.Errorf("Expected empty result for invalid length, got: %v", shortFields)
+	}
+}
+
+// TestParseCCCReconcilement tests CCC reconcilement parsing
+func TestParseCCCReconcilement(t *testing.T) {
+	parser := &AgencyReconcilementParser{}
+
+	// Test valid CCC reconcilement
+	validRecon := "AB" + // TOPPaymentAgencyID
+		"CD" + // TOPAgencySiteID
+		strings.Repeat(" ", 96) // Filler
+
+	fields := parser.ParseCCCReconcilement(validRecon)
+
+	expectedFields := map[string]string{
+		"TOPPaymentAgencyID": "AB",
+		"TOPAgencySiteID":    "CD",
+	}
+
+	for key, expected := range expectedFields {
+		if actual, exists := fields[key]; !exists {
+			t.Errorf("Missing field %s", key)
+		} else if actual != expected {
+			t.Errorf("Field %s: expected %s, got %s", key, expected, actual)
+		}
+	}
+
+	// Test empty TOP fields (should parse but be empty)
+	emptyRecon := "  " + // Empty TOPPaymentAgencyID
+		"  " + // Empty TOPAgencySiteID
+		strings.Repeat(" ", 96) // Filler
+
+	emptyFields := parser.ParseCCCReconcilement(emptyRecon)
+	if emptyFields["TOPPaymentAgencyID"] != "" {
+		t.Errorf("Expected empty TOP Payment Agency ID, got: '%s'", emptyFields["TOPPaymentAgencyID"])
+	}
+	if emptyFields["TOPAgencySiteID"] != "" {
+		t.Errorf("Expected empty TOP Agency Site ID, got: '%s'", emptyFields["TOPAgencySiteID"])
+	}
+
+	// Test invalid length reconcilement
+	shortRecon := "ABCD"
+	shortFields := parser.ParseCCCReconcilement(shortRecon)
+	if len(shortFields) != 0 {
+		t.Errorf("Expected empty result for invalid length, got: %v", shortFields)
+	}
+}
+
 // TestValidateAgencySpecificIntegration tests the main ValidateAgencySpecific function
 func TestValidateAgencySpecificIntegration(t *testing.T) {
 	validator := NewValidator()
@@ -245,6 +534,36 @@ func TestValidateAgencySpecificIntegration(t *testing.T) {
 	err := validator.ValidateAgencySpecific(vaPayment, "VA")
 	if err != nil {
 		t.Errorf("Unexpected error for valid VA payment through public interface: %v", err)
+	}
+
+	// Test RRB validation through public interface
+	validRRBRecon := "AB" + // BeneficiarySymbol
+		"C" + // PrefixCode
+		"D" + // PayeeCode
+		"E" + // ObjectCode
+		strings.Repeat(" ", 95) // Filler
+
+	rrBPayment := &ACHPayment{
+		Reconcilement: validRRBRecon,
+	}
+
+	err = validator.ValidateAgencySpecific(rrBPayment, "RRB")
+	if err != nil {
+		t.Errorf("Unexpected error for valid RRB payment through public interface: %v", err)
+	}
+
+	// Test CCC validation through public interface
+	validCCCRecon := "AB" + // TOPPaymentAgencyID
+		"CD" + // TOPAgencySiteID
+		strings.Repeat(" ", 96) // Filler
+
+	cccPayment := &ACHPayment{
+		Reconcilement: validCCCRecon,
+	}
+
+	err = validator.ValidateAgencySpecific(cccPayment, "CCC")
+	if err != nil {
+		t.Errorf("Unexpected error for valid CCC payment through public interface: %v", err)
 	}
 
 	// Test SSA validation through public interface

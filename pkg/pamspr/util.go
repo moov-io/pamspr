@@ -460,3 +460,47 @@ func (arp *AgencyReconcilementParser) ParseSSAReconcilement(recon string, ruleID
 
 	return result
 }
+
+// ParseRRBReconcilement parses RRB-specific reconcilement data
+// RRB reconcilement structure (100 characters):
+// - Beneficiary Symbol (positions 1-2): 2-character alphanumeric field
+// - Prefix Code (position 3): 1-character alphanumeric field
+// - Payee Code (position 4): 1-character alphanumeric field
+// - Object Code (position 5): 1-character alphanumeric field (mapped to PACER)
+// - Filler (positions 6-100): 95 characters of filler
+func (arp *AgencyReconcilementParser) ParseRRBReconcilement(recon string) map[string]string {
+	result := make(map[string]string)
+
+	if len(recon) != 100 {
+		return result
+	}
+
+	result["BeneficiarySymbol"] = strings.TrimSpace(recon[0:2])
+	result["PrefixCode"] = strings.TrimSpace(recon[2:3])
+	result["PayeeCode"] = strings.TrimSpace(recon[3:4])
+	result["ObjectCode"] = strings.TrimSpace(recon[4:5])
+	// Filler at positions 5-99 (95 characters) - not included in result
+
+	return result
+}
+
+// ParseCCCReconcilement parses CCC-specific reconcilement data
+// CCC reconcilement structure (100 characters):
+// - TOP Payment Agency ID (positions 1-2): 2-character alphabetic field
+// - TOP Agency Site ID (positions 3-4): 2-character alphabetic field
+// - Filler (positions 5-100): 96 characters of filler
+// Business rule: If one payment within a schedule contains these values,
+// the entire schedule will be sent to TOP with these values.
+func (arp *AgencyReconcilementParser) ParseCCCReconcilement(recon string) map[string]string {
+	result := make(map[string]string)
+
+	if len(recon) != 100 {
+		return result
+	}
+
+	result["TOPPaymentAgencyID"] = strings.TrimSpace(recon[0:2])
+	result["TOPAgencySiteID"] = strings.TrimSpace(recon[2:4])
+	// Filler at positions 4-99 (96 characters) - not included in result
+
+	return result
+}
