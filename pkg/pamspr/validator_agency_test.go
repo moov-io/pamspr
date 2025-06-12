@@ -70,7 +70,7 @@ func TestValidateVAPayment(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for missing VA station code")
 	}
-	if !strings.Contains(err.Error(), "station code is required") {
+	if !strings.Contains(err.Error(), "Reconcilement.StationCode is required") {
 		t.Errorf("Expected station code error, got: %v", err)
 	}
 
@@ -85,7 +85,7 @@ func TestValidateVAPayment(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for missing VA FIN code")
 	}
-	if !strings.Contains(err.Error(), "FIN code is required") {
+	if !strings.Contains(err.Error(), "Reconcilement.FinCode is required") {
 		t.Errorf("Expected FIN code error, got: %v", err)
 	}
 
@@ -160,7 +160,7 @@ func TestValidateSSAPayment(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for missing SSA program service center code")
 	}
-	if !strings.Contains(err.Error(), "program service center code is required") {
+	if !strings.Contains(err.Error(), "Reconcilement.ProgramServiceCenterCode is required") {
 		t.Errorf("Expected PSC error, got: %v", err)
 	}
 
@@ -176,7 +176,7 @@ func TestValidateSSAPayment(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for missing SSA payment ID code")
 	}
-	if !strings.Contains(err.Error(), "payment ID code is required") {
+	if !strings.Contains(err.Error(), "Reconcilement.PaymentIDCode is required") {
 		t.Errorf("Expected payment ID error, got: %v", err)
 	}
 
@@ -277,8 +277,8 @@ func TestValidateRRBPayment(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for missing Beneficiary Symbol")
 	}
-	if !strings.Contains(err.Error(), "Beneficiary Symbol must be exactly 2") {
-		t.Errorf("Expected Beneficiary Symbol error, got: %v", err)
+	if !strings.Contains(err.Error(), "BeneficiarySymbol must be exactly 2") {
+		t.Errorf("Expected BeneficiarySymbol error, got: %v", err)
 	}
 
 	// Test missing Prefix Code

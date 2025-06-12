@@ -20,6 +20,56 @@ func (e ValidationError) Error() string {
 		e.Field, e.Value, e.Rule, e.Message)
 }
 
+// NewValidationError creates a ValidationError with consistent formatting
+func NewValidationError(field, value, rule, message string) ValidationError {
+	return ValidationError{
+		Field:   field,
+		Value:   value,
+		Rule:    rule,
+		Message: message,
+	}
+}
+
+// NewFieldRequiredError creates a ValidationError for missing required fields
+func NewFieldRequiredError(field string) ValidationError {
+	return ValidationError{
+		Field:   field,
+		Value:   "",
+		Rule:    "required",
+		Message: fmt.Sprintf("%s is required", field),
+	}
+}
+
+// NewFieldLengthError creates a ValidationError for incorrect field lengths
+func NewFieldLengthError(field, value string, expected, actual int) ValidationError {
+	return ValidationError{
+		Field:   field,
+		Value:   value,
+		Rule:    "length",
+		Message: fmt.Sprintf("%s must be exactly %d characters, got %d", field, expected, actual),
+	}
+}
+
+// NewFieldFormatError creates a ValidationError for invalid field formats
+func NewFieldFormatError(field, value, expectedFormat string) ValidationError {
+	return ValidationError{
+		Field:   field,
+		Value:   value,
+		Rule:    "format",
+		Message: fmt.Sprintf("%s must %s", field, expectedFormat),
+	}
+}
+
+// WrapValidationError wraps an existing error as a ValidationError with additional context
+func WrapValidationError(field, value, rule string, err error) ValidationError {
+	return ValidationError{
+		Field:   field,
+		Value:   value,
+		Rule:    rule,
+		Message: err.Error(),
+	}
+}
+
 // Validator provides validation methods for PAM SPR records
 type Validator struct {
 	// Configuration
@@ -55,10 +105,10 @@ func NewValidator() *Validator {
 func (v *Validator) ValidateFileStructure(file *File) error {
 	// Rule: File must have header and trailer
 	if file.Header == nil {
-		return ValidationError{Field: "FileHeader", Rule: "required", Message: "file header is required"}
+		return NewFieldRequiredError("FileHeader")
 	}
 	if file.Trailer == nil {
-		return ValidationError{Field: "FileTrailer", Rule: "required", Message: "file trailer is required"}
+		return NewFieldRequiredError("FileTrailer")
 	}
 
 	// Rule: A schedule can contain only one type of payment
@@ -181,12 +231,7 @@ func (v *Validator) ValidateACHPayment(payment *ACHPayment) error {
 
 	// Routing number validation (9 digits, valid checksum)
 	if err := v.validateRoutingNumber(payment.RoutingNumber); err != nil {
-		return ValidationError{
-			Field:   "RoutingNumber",
-			Value:   payment.RoutingNumber,
-			Rule:    "routing_number",
-			Message: err.Error(),
-		}
+		return WrapValidationError("RoutingNumber", payment.RoutingNumber, "routing_number", err)
 	}
 
 	// Account number validation
@@ -655,11 +700,7 @@ func (v *Validator) validateVAPayment(payment Payment) error {
 	// Validate required Station Code (2 chars)
 	stationCode := fields["StationCode"]
 	if len(stationCode) == 0 {
-		return ValidationError{
-			Field:   "Reconcilement.StationCode",
-			Rule:    "va_station_required",
-			Message: "VA station code is required",
-		}
+		return NewFieldRequiredError("Reconcilement.StationCode")
 	}
 	if len(stationCode) > 2 {
 		return ValidationError{
@@ -674,11 +715,7 @@ func (v *Validator) validateVAPayment(payment Payment) error {
 	// Validate required FIN Code (2 chars)
 	finCode := fields["FinCode"]
 	if len(finCode) == 0 {
-		return ValidationError{
-			Field:   "Reconcilement.FinCode",
-			Rule:    "va_fin_required",
-			Message: "VA FIN code is required",
-		}
+		return NewFieldRequiredError("Reconcilement.FinCode")
 	}
 	if len(finCode) > 2 {
 		return ValidationError{
@@ -770,11 +807,7 @@ func (v *Validator) validateSSAPayment(payment Payment) error {
 	// Validate Program Service Center Code (1 char, required)
 	pscCode := fields["ProgramServiceCenterCode"]
 	if len(pscCode) == 0 {
-		return ValidationError{
-			Field:   "Reconcilement.ProgramServiceCenterCode",
-			Rule:    "ssa_psc_required",
-			Message: "SSA program service center code is required",
-		}
+		return NewFieldRequiredError("Reconcilement.ProgramServiceCenterCode")
 	}
 	if len(pscCode) > 1 {
 		return ValidationError{
@@ -789,11 +822,7 @@ func (v *Validator) validateSSAPayment(payment Payment) error {
 	// Validate Payment ID Code (2 chars, required)
 	paymentIDCode := fields["PaymentIDCode"]
 	if len(paymentIDCode) == 0 {
-		return ValidationError{
-			Field:   "Reconcilement.PaymentIDCode",
-			Rule:    "ssa_payment_id_required",
-			Message: "SSA payment ID code is required",
-		}
+		return NewFieldRequiredError("Reconcilement.PaymentIDCode")
 	}
 	if len(paymentIDCode) > 2 {
 		return ValidationError{
@@ -832,11 +861,7 @@ func (v *Validator) validateRRBPayment(payment Payment) error {
 	// RRB-specific reconcilement field validation
 	recon := payment.GetReconcilement()
 	if len(recon) != 100 {
-		return ValidationError{
-			Field:   "Reconcilement",
-			Rule:    "rrb_format",
-			Message: fmt.Sprintf("RRB reconcilement field must be exactly 100 characters, got %d", len(recon)),
-		}
+		return NewFieldLengthError("Reconcilement", recon, 100, len(recon))
 	}
 
 	// Parse RRB reconcilement fields using parser
@@ -845,12 +870,7 @@ func (v *Validator) validateRRBPayment(payment Payment) error {
 
 	// Validate required fields are present and properly formatted
 	if beneficiarySymbol := fields["BeneficiarySymbol"]; len(beneficiarySymbol) != 2 {
-		return ValidationError{
-			Field:   "BeneficiarySymbol",
-			Value:   beneficiarySymbol,
-			Rule:    "rrb_beneficiary_symbol",
-			Message: "RRB Beneficiary Symbol must be exactly 2 alphanumeric characters",
-		}
+		return NewFieldFormatError("BeneficiarySymbol", beneficiarySymbol, "be exactly 2 alphanumeric characters")
 	}
 
 	if prefixCode := fields["PrefixCode"]; len(prefixCode) != 1 {
