@@ -42,21 +42,8 @@ type Schedule interface {
 	Validate() error
 }
 
-// ACHScheduleAccessor provides type-safe access to ACH schedule fields
-type ACHScheduleAccessor interface {
-	Schedule
-	GetHeader() *ACHScheduleHeader
-	SetHeader(*ACHScheduleHeader)
-	GetACHPayments() []*ACHPayment // Type-safe payment access
-}
-
-// CheckScheduleAccessor provides type-safe access to Check schedule fields
-type CheckScheduleAccessor interface {
-	Schedule
-	GetHeader() *CheckScheduleHeader
-	SetHeader(*CheckScheduleHeader)
-	GetCheckPayments() []*CheckPayment // Type-safe payment access
-}
+// Removed ACHScheduleAccessor and CheckScheduleAccessor interfaces
+// Use direct type assertions to access type-specific fields
 
 // Payment represents either an ACH or Check payment
 type Payment interface {
@@ -70,36 +57,8 @@ type Payment interface {
 	Validate() error
 }
 
-// ACHPaymentAccessor provides type-safe access to ACH-specific fields
-type ACHPaymentAccessor interface {
-	Payment
-	GetRoutingNumber() string
-	SetRoutingNumber(string)
-	GetAccountNumber() string
-	SetAccountNumber(string)
-	GetStandardEntryClassCode() string
-	SetStandardEntryClassCode(string)
-	GetAddenda() []*ACHAddendum
-	SetAddenda([]*ACHAddendum)
-	AddAddendum(*ACHAddendum)
-	GetCARSTASBETC() []*CARSTASBETC
-	SetCARSTASBETC([]*CARSTASBETC)
-	AddCARSTASBETC(*CARSTASBETC)
-	GetDNP() *DNPRecord
-	SetDNP(*DNPRecord)
-}
-
-// CheckPaymentAccessor provides type-safe access to Check-specific fields
-type CheckPaymentAccessor interface {
-	Payment
-	GetCheckStub() *CheckStub
-	SetCheckStub(*CheckStub)
-	GetCARSTASBETC() []*CARSTASBETC
-	SetCARSTASBETC([]*CARSTASBETC)
-	AddCARSTASBETC(*CARSTASBETC)
-	GetDNP() *DNPRecord
-	SetDNP(*DNPRecord)
-}
+// Removed ACHPaymentAccessor and CheckPaymentAccessor interfaces
+// Use direct type assertions to access type-specific fields
 
 // BaseSchedule contains common schedule fields
 type BaseSchedule struct {
@@ -141,24 +100,8 @@ func (s *ACHSchedule) SetTrailer(trailer *ScheduleTrailer) {
 	s.Trailer = trailer
 }
 
-// ACHScheduleAccessor interface implementation
-func (s *ACHSchedule) GetHeader() *ACHScheduleHeader {
-	return s.Header
-}
-
-func (s *ACHSchedule) SetHeader(header *ACHScheduleHeader) {
-	s.Header = header
-}
-
-func (s *ACHSchedule) GetACHPayments() []*ACHPayment {
-	payments := make([]*ACHPayment, 0, len(s.Payments))
-	for _, payment := range s.Payments {
-		if achPayment, ok := payment.(*ACHPayment); ok {
-			payments = append(payments, achPayment)
-		}
-	}
-	return payments
-}
+// Direct field access is preferred over getter methods
+// Access s.Header directly instead of using GetHeader()
 
 // Validate validates the ACH schedule
 func (s *ACHSchedule) Validate() error {
@@ -207,24 +150,8 @@ func (s *CheckSchedule) SetTrailer(trailer *ScheduleTrailer) {
 	s.Trailer = trailer
 }
 
-// CheckScheduleAccessor interface implementation
-func (s *CheckSchedule) GetHeader() *CheckScheduleHeader {
-	return s.Header
-}
-
-func (s *CheckSchedule) SetHeader(header *CheckScheduleHeader) {
-	s.Header = header
-}
-
-func (s *CheckSchedule) GetCheckPayments() []*CheckPayment {
-	payments := make([]*CheckPayment, 0, len(s.Payments))
-	for _, payment := range s.Payments {
-		if checkPayment, ok := payment.(*CheckPayment); ok {
-			payments = append(payments, checkPayment)
-		}
-	}
-	return payments
-}
+// Direct field access is preferred over getter methods
+// Access s.Header directly instead of using GetHeader()
 
 // Validate validates the check schedule
 func (s *CheckSchedule) Validate() error {
@@ -610,35 +537,37 @@ const (
 	PaymentTypeCheck
 )
 
-// Interface conversion utilities
+// Type assertion helpers for cleaner code
+// Use direct type assertions: payment.(*ACHPayment) or schedule.(*ACHSchedule)
+// These helpers are retained for backward compatibility but may be deprecated
 
-// AsACHPayment safely converts a Payment to ACHPaymentAccessor
-func AsACHPayment(payment Payment) (ACHPaymentAccessor, bool) {
-	if achPayment, ok := payment.(ACHPaymentAccessor); ok {
+// AsACHPayment safely converts a Payment to *ACHPayment
+func AsACHPayment(payment Payment) (*ACHPayment, bool) {
+	if achPayment, ok := payment.(*ACHPayment); ok {
 		return achPayment, true
 	}
 	return nil, false
 }
 
-// AsCheckPayment safely converts a Payment to CheckPaymentAccessor
-func AsCheckPayment(payment Payment) (CheckPaymentAccessor, bool) {
-	if checkPayment, ok := payment.(CheckPaymentAccessor); ok {
+// AsCheckPayment safely converts a Payment to *CheckPayment
+func AsCheckPayment(payment Payment) (*CheckPayment, bool) {
+	if checkPayment, ok := payment.(*CheckPayment); ok {
 		return checkPayment, true
 	}
 	return nil, false
 }
 
-// AsACHSchedule safely converts a Schedule to ACHScheduleAccessor
-func AsACHSchedule(schedule Schedule) (ACHScheduleAccessor, bool) {
-	if achSchedule, ok := schedule.(ACHScheduleAccessor); ok {
+// AsACHSchedule safely converts a Schedule to *ACHSchedule
+func AsACHSchedule(schedule Schedule) (*ACHSchedule, bool) {
+	if achSchedule, ok := schedule.(*ACHSchedule); ok {
 		return achSchedule, true
 	}
 	return nil, false
 }
 
-// AsCheckSchedule safely converts a Schedule to CheckScheduleAccessor
-func AsCheckSchedule(schedule Schedule) (CheckScheduleAccessor, bool) {
-	if checkSchedule, ok := schedule.(CheckScheduleAccessor); ok {
+// AsCheckSchedule safely converts a Schedule to *CheckSchedule
+func AsCheckSchedule(schedule Schedule) (*CheckSchedule, bool) {
+	if checkSchedule, ok := schedule.(*CheckSchedule); ok {
 		return checkSchedule, true
 	}
 	return nil, false
