@@ -140,6 +140,49 @@ func TestSyntheticACHFile(t *testing.T) {
 }
 ```
 
+## Library Improvements Needed
+
+To make this library production-ready for federal agencies, we need:
+
+### **Critical: Agency-Specific Test Cases**
+The library currently has **basic agency validation** implemented for VA and SSA, but needs **comprehensive test cases** based on real Treasury specifications:
+
+1. **VA Test Cases Needed**:
+   - Valid station codes and FIN codes from Treasury
+   - Real policy number formats and appropriation codes
+   - Courtesy code validation for check payments
+   - Payment type restrictions for VA
+
+2. **SSA Test Cases Needed**:
+   - Valid program service center codes (0-9, A-Z)
+   - Real payment ID codes for different benefit types
+   - TIN indicator offset business rules
+   - Cross-validation of PSC and Payment ID combinations
+
+3. **Missing Agency Implementations**:
+   - **RRB**: Railroad retirement validation (employee IDs, railroad-specific rules)
+   - **CCC**: Agricultural program validation (commodity codes, farm programs)
+   - **Enhanced IRS**: Beyond basic length validation (MFT codes, service centers)
+
+### **How to Improve the Library**
+
+1. **Contact Treasury** for real validation specifications:
+   - PAM.SAT@fiscal.treasury.gov for test data
+   - FS.AgencyOutreach@fiscal.treasury.gov for business rules
+
+2. **Add Agency Test Files** to `testdata/treasury/agency/`:
+   - Real Treasury-approved test files with edge cases
+   - Invalid files that should fail validation
+   - Files testing maximum field lengths and special characters
+
+3. **Implement Missing Validations**:
+   - Payment amount limits per agency
+   - Cross-field validation rules
+   - Payment type restrictions
+   - Business rule validation (not just format)
+
+Without these agency-specific test cases and real Treasury specifications, federal agencies **cannot use this library in production** as it may accept invalid payments that Treasury systems would reject.
+
 ## Contributing
 
 When adding new synthetic test files:
