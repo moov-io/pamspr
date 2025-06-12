@@ -136,7 +136,7 @@ func (w *Writer) writeACHPayment(payment *ACHPayment) error {
 		w.formatField(payment.AgencyAccountIdentifier, 16) +
 		w.formatAmount(payment.Amount, 10) +
 		w.formatField(payment.AgencyPaymentTypeCode, 1) +
-		w.formatField(payment.IsTOPOffset, 1) +
+		w.formatField(payment.IsTOP_Offset, 1) +
 		w.formatField(payment.PayeeName, 35) +
 		w.formatField(payment.PayeeAddressLine1, 35) +
 		w.formatField(payment.PayeeAddressLine2, 35) +
@@ -148,7 +148,7 @@ func (w *Writer) writeACHPayment(payment *ACHPayment) error {
 		w.formatField(payment.CountryCodeText, 2) +
 		w.formatField(payment.RoutingNumber, 9) +
 		w.formatField(payment.AccountNumber, 17) +
-		w.formatField(payment.ACHTransactionCode, 2) +
+		w.formatField(payment.ACH_TransactionCode, 2) +
 		w.formatField(payment.PayeeIdentifierAdditional, 9) +
 		w.formatField(payment.PayeeNameAdditional, 35) +
 		w.formatField(payment.PaymentID, 20) +
@@ -228,7 +228,7 @@ func (w *Writer) writeCheckPayment(payment *CheckPayment) error {
 		w.formatField(payment.AgencyAccountIdentifier, 16) +
 		w.formatAmount(payment.Amount, 10) +
 		w.formatField(payment.AgencyPaymentTypeCode, 1) +
-		w.formatField(payment.IsTOPOffset, 1) +
+		w.formatField(payment.IsTOP_Offset, 1) +
 		w.formatField(payment.PayeeName, 35) +
 		w.formatField(payment.PayeeAddressLine1, 35) +
 		w.formatField(payment.PayeeAddressLine2, 35) +
@@ -245,8 +245,8 @@ func (w *Writer) writeCheckPayment(payment *CheckPayment) error {
 		w.formatField(payment.ConsularCode, 3) +
 		w.formatField(payment.CheckLegendText1, 55) +
 		w.formatField(payment.CheckLegendText2, 55) +
-		w.formatField(payment.PayeeIdentifierSecondary, 9) +
-		w.formatField(payment.PartyNameSecondary, 35) +
+		w.formatField(payment.PayeeIdentifier_Secondary, 9) +
+		w.formatField(payment.PartyName_Secondary, 35) +
 		w.formatField(payment.PaymentID, 20) +
 		w.formatFieldNoJustify(payment.Reconcilement, 100) + // Don't justify reconcilement
 		w.formatField(payment.SpecialHandling, 50) +

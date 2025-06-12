@@ -249,7 +249,7 @@ func createTestACHFile() *File {
 							PayeeName:               "TEST PAYEE 1",
 							RoutingNumber:           "021000021",
 							AccountNumber:           "1234567890",
-							ACHTransactionCode:      "22",
+							ACH_TransactionCode:     "22",
 							PaymentID:               "PAY001              ",
 						},
 						&ACHPayment{
@@ -259,7 +259,7 @@ func createTestACHFile() *File {
 							PayeeName:               "TEST PAYEE 2",
 							RoutingNumber:           "122000247",
 							AccountNumber:           "9876543210",
-							ACHTransactionCode:      "27",
+							ACH_TransactionCode:     "27",
 							PaymentID:               "PAY002              ",
 						},
 					},
@@ -498,7 +498,7 @@ func createTestLargeFile() *File {
 			PayeeName:               "PAYEE " + fmt.Sprintf("%d", i),
 			RoutingNumber:           "021000021",
 			AccountNumber:           "1234567890",
-			ACHTransactionCode:      "22",
+			ACH_TransactionCode:     "22",
 			PaymentID:               "PAY" + padLeft(fmt.Sprintf("%d", i), 17, '0'),
 		}
 	}

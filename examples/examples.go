@@ -46,7 +46,7 @@ func CreateACHFile() {
 		AgencyAccountIdentifier:      "EMP001",
 		Amount:                       250000, // $2,500.00
 		AgencyPaymentTypeCode:        "S",
-		IsTOPOffset:                  "1",
+		IsTOP_Offset:                 "1",
 		PayeeName:                    "JOHN DOE",
 		PayeeAddressLine1:            "123 MAIN ST",
 		PayeeAddressLine2:            "APT 4B",
@@ -55,7 +55,7 @@ func CreateACHFile() {
 		PostalCode:                   "20001",
 		RoutingNumber:                "021000021",
 		AccountNumber:                "1234567890",
-		ACHTransactionCode:           "22", // Checking credit
+		ACH_TransactionCode:          "22", // Checking credit
 		PaymentID:                    "PAY001",
 		TIN:                          "123456789",
 		PaymentRecipientTINIndicator: "1", // SSN
@@ -66,7 +66,7 @@ func CreateACHFile() {
 		AgencyAccountIdentifier:      "EMP002",
 		Amount:                       350000, // $3,500.00
 		AgencyPaymentTypeCode:        "S",
-		IsTOPOffset:                  "1",
+		IsTOP_Offset:                 "1",
 		PayeeName:                    "JANE SMITH",
 		PayeeAddressLine1:            "456 OAK AVE",
 		CityName:                     "ARLINGTON",
@@ -74,7 +74,7 @@ func CreateACHFile() {
 		PostalCode:                   "22201",
 		RoutingNumber:                "021000021",
 		AccountNumber:                "0987654321",
-		ACHTransactionCode:           "32", // Savings credit
+		ACH_TransactionCode:          "32", // Savings credit
 		PaymentID:                    "PAY002",
 		TIN:                          "987654321",
 		PaymentRecipientTINIndicator: "1", // SSN
@@ -232,7 +232,7 @@ func CreateCheckFile() {
 		AgencyAccountIdentifier:      "VEND001",
 		Amount:                       150000, // $1,500.00
 		AgencyPaymentTypeCode:        "V",
-		IsTOPOffset:                  "1",
+		IsTOP_Offset:                 "1",
 		PayeeName:                    "ABC COMPANY LLC",
 		PayeeAddressLine1:            "789 BUSINESS BLVD",
 		PayeeAddressLine2:            "SUITE 100",
@@ -325,14 +325,14 @@ func ValidateSameDayACH() {
 
 	// This will pass validation
 	validPayment := &pamspr.ACHPayment{
-		Amount:             50000, // $500.00 - under SDA limit
-		ACHTransactionCode: "22",
+		Amount:              50000, // $500.00 - under SDA limit
+		ACH_TransactionCode: "22",
 	}
 
 	// This will fail validation - amount too high
 	invalidPayment := &pamspr.ACHPayment{
-		Amount:             200000000, // $2,000,000 - over SDA limit
-		ACHTransactionCode: "22",
+		Amount:              200000000, // $2,000,000 - over SDA limit
+		ACH_TransactionCode: "22",
 	}
 
 	// Test valid payment

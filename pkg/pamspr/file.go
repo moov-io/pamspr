@@ -248,6 +248,7 @@ type FileHeader struct {
 	InputSystem              string `pamspr:"InputSystem"`
 	StandardPaymentVersion   string `pamspr:"StandardPaymentVersion"`
 	IsRequestedForSameDayACH string `pamspr:"IsRequestedForSameDayACH"`
+	Filler                   string `pamspr:"Filler"`
 }
 
 // FileTrailer represents the file trailer record
@@ -266,7 +267,9 @@ type ACHScheduleHeader struct {
 	PaymentTypeCode         string `pamspr:"PaymentTypeCode"`
 	StandardEntryClassCode  string `pamspr:"StandardEntryClassCode"`
 	AgencyLocationCode      string `pamspr:"AgencyLocationCode" format:"numeric"`
+	Filler1                 string `pamspr:"Filler1"`
 	FederalEmployerIDNumber string `pamspr:"FederalEmployerIDNumber"`
+	Filler2                 string `pamspr:"Filler2"`
 }
 
 // CheckScheduleHeader represents check schedule header record
@@ -275,7 +278,9 @@ type CheckScheduleHeader struct {
 	ScheduleNumber            string // 14 chars
 	PaymentTypeCode           string // 25 chars
 	AgencyLocationCode        string // 8 digits
+	Filler1                   string // 9 chars
 	CheckPaymentEnclosureCode string // 10 chars: "nameonly", "letter", "stub", "insert", or blank
+	Filler2                   string // 782 chars
 }
 
 // ACHPayment represents an ACH payment data record
@@ -284,7 +289,7 @@ type ACHPayment struct {
 	AgencyAccountIdentifier      string // 16 chars
 	Amount                       int64  // 10 digits, amount in cents
 	AgencyPaymentTypeCode        string // 1 char
-	IsTOPOffset                  string // "0" or "1"
+	IsTOP_Offset                 string // "0" or "1"
 	PayeeName                    string // 35 chars
 	PayeeAddressLine1            string // 35 chars
 	PayeeAddressLine2            string // 35 chars
@@ -296,7 +301,7 @@ type ACHPayment struct {
 	CountryCodeText              string // 2 chars
 	RoutingNumber                string // 9 digits
 	AccountNumber                string // 17 chars
-	ACHTransactionCode           string // 2 digits
+	ACH_TransactionCode          string // 2 digits
 	PayeeIdentifierAdditional    string // 9 chars (Secondary TIN)
 	PayeeNameAdditional          string // 35 chars (Secondary Name)
 	PaymentID                    string // 20 chars
@@ -312,6 +317,7 @@ type ACHPayment struct {
 	SubPaymentTypeCode           string // 32 chars
 	PayerMechanism               string // 20 chars
 	PaymentDescriptionCode       string // 2 chars
+	Filler                       string // 284 chars
 
 	// Associated records
 	Addenda     []*ACHAddendum
@@ -434,7 +440,7 @@ type CheckPayment struct {
 	AgencyAccountIdentifier      string // 16 chars
 	Amount                       int64  // 10 digits, amount in cents
 	AgencyPaymentTypeCode        string // 1 char
-	IsTOPOffset                  string // "0" or "1"
+	IsTOP_Offset                 string // "0" or "1"
 	PayeeName                    string // 35 chars
 	PayeeAddressLine1            string // 35 chars
 	PayeeAddressLine2            string // 35 chars
@@ -446,12 +452,13 @@ type CheckPayment struct {
 	PostalCode                   string // 5 chars
 	PostalCodeExtension          string // 5 chars
 	PostNetBarcodeDeliveryPoint  string // 3 chars
+	Filler1                      string // 14 chars
 	CountryName                  string // 40 chars
 	ConsularCode                 string // 3 chars (Geo Code)
 	CheckLegendText1             string // 55 chars
 	CheckLegendText2             string // 55 chars
-	PayeeIdentifierSecondary     string // 9 chars
-	PartyNameSecondary           string // 35 chars
+	PayeeIdentifier_Secondary    string // 9 chars
+	PartyName_Secondary          string // 35 chars
 	PaymentID                    string // 20 chars
 	Reconcilement                string // 100 chars
 	SpecialHandling              string // 50 chars
@@ -463,6 +470,7 @@ type CheckPayment struct {
 	SubPaymentTypeCode           string // 32 chars
 	PayerMechanism               string // 20 chars
 	PaymentDescriptionCode       string // 2 chars
+	Filler2                      string // 87 chars
 
 	// Associated records
 	Stub        *CheckStub

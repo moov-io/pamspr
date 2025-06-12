@@ -206,10 +206,10 @@ func (v *Validator) ValidateACHPayment(payment *ACHPayment) error {
 		"42": true, "43": true,
 		"52": true, "53": true,
 	}
-	if !validTransactionCodes[payment.ACHTransactionCode] {
+	if !validTransactionCodes[payment.ACH_TransactionCode] {
 		return ValidationError{
-			Field:   "ACHTransactionCode",
-			Value:   payment.ACHTransactionCode,
+			Field:   "ACH_TransactionCode",
+			Value:   payment.ACH_TransactionCode,
 			Rule:    "valid_values",
 			Message: "invalid ACH transaction code",
 		}
