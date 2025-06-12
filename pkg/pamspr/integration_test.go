@@ -353,27 +353,27 @@ func createTestACHWithAddenda() *File {
 	// Add standard addendum
 	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
 		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[0]); ok {
-			achPayment.SetAddenda([]*ACHAddendum{
+			achPayment.Addenda = []*ACHAddendum{
 				{
 					RecordCode:         "03",
 					PaymentID:          "PAY001              ",
 					AddendaInformation: "INVOICE 12345 DATED 2024-01-01",
 				},
-			})
+			}
 		}
 	}
 
 	// Add CTX addendum to second payment
 	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
 		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[1]); ok {
-			achPayment.SetStandardEntryClassCode("CTX")
-			achPayment.SetAddenda([]*ACHAddendum{
+			achPayment.StandardEntryClassCode = "CTX"
+			achPayment.Addenda = []*ACHAddendum{
 				{
 					RecordCode:         "04",
 					PaymentID:          "PAY002              ",
 					AddendaInformation: "ISA*00*          *00*          " + strings.Repeat("X", 768),
 				},
-			})
+			}
 		}
 	}
 
@@ -389,7 +389,7 @@ func createTestFileWithCARS() *File {
 	// Add CARS record
 	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
 		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[0]); ok {
-			achPayment.SetCARSTASBETC([]*CARSTASBETC{
+			achPayment.CARSTASBETC = []*CARSTASBETC{
 				{
 					RecordCode:                    "G ",
 					PaymentID:                     "PAY001              ",
@@ -405,7 +405,7 @@ func createTestFileWithCARS() *File {
 					AccountClassificationAmount:   100000,
 					IsCredit:                      "0",
 				},
-			})
+			}
 		}
 	}
 
@@ -421,11 +421,11 @@ func createTestFileWithDNP() *File {
 	// Add DNP record
 	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
 		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[0]); ok {
-			achPayment.SetDNP(&DNPRecord{
+			achPayment.DNP = &DNPRecord{
 				RecordCode: "DD",
 				PaymentID:  "PAY001              ",
 				DNPDetail:  "DNP TEST DETAIL INFORMATION",
-			})
+			}
 		}
 	}
 
@@ -514,7 +514,7 @@ func createFileWithInvalidRoutingNumber() *File {
 	file := createTestACHFile()
 	if achSchedule, ok := AsACHSchedule(file.Schedules[0]); ok {
 		if achPayment, ok := AsACHPayment(achSchedule.GetPayments()[0]); ok {
-			achPayment.SetRoutingNumber("123456789") // Invalid
+			achPayment.RoutingNumber = "123456789" // Invalid
 		}
 	}
 	return file

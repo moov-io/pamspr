@@ -2,10 +2,10 @@
 // Payment Automation Manager (PAM) Standard Payment Request (SPR) files
 //
 // Design Philosophy:
-// - Prefer direct field access over getter/setter methods where possible
-// - Use interfaces only for polymorphic behavior (Schedule, Payment)
-// - Use type assertions to access type-specific fields: payment.(*ACHPayment).RoutingNumber
-// - Minimal interface design with essential methods only
+// - Direct field access is preferred over getter/setter methods
+// - Interfaces only provide essential polymorphic behavior
+// - Use type assertions for type-specific fields: payment.(*ACHPayment).RoutingNumber
+// - Minimal interface design with only required methods
 package pamspr
 
 import "fmt"
@@ -106,8 +106,7 @@ func (s *ACHSchedule) SetTrailer(trailer *ScheduleTrailer) {
 	s.Trailer = trailer
 }
 
-// Direct field access is preferred over getter methods
-// Access s.Header directly instead of using GetHeader()
+// Access s.Header directly - no getter methods provided for type-specific fields
 
 // Validate validates the ACH schedule
 func (s *ACHSchedule) Validate() error {
@@ -156,8 +155,7 @@ func (s *CheckSchedule) SetTrailer(trailer *ScheduleTrailer) {
 	s.Trailer = trailer
 }
 
-// Direct field access is preferred over getter methods
-// Access s.Header directly instead of using GetHeader()
+// Access s.Header directly - no getter methods provided for type-specific fields
 
 // Validate validates the check schedule
 func (s *CheckSchedule) Validate() error {
@@ -296,66 +294,20 @@ func (p *ACHPayment) GetReconcilement() string {
 	return p.Reconcilement
 }
 
-// Type-specific field accessors
-// NOTE: Direct field access is preferred in Go. Use p.RoutingNumber instead of p.GetRoutingNumber()
-// These methods are kept for backward compatibility but may be deprecated in future versions.
-
-func (p *ACHPayment) GetRoutingNumber() string {
-	return p.RoutingNumber
-}
-
-func (p *ACHPayment) SetRoutingNumber(routingNumber string) {
-	p.RoutingNumber = routingNumber
-}
-
-func (p *ACHPayment) GetAccountNumber() string {
-	return p.AccountNumber
-}
-
-func (p *ACHPayment) SetAccountNumber(accountNumber string) {
-	p.AccountNumber = accountNumber
-}
-
-func (p *ACHPayment) GetStandardEntryClassCode() string {
-	return p.StandardEntryClassCode
-}
-
-func (p *ACHPayment) SetStandardEntryClassCode(code string) {
-	p.StandardEntryClassCode = code
-}
-
-func (p *ACHPayment) GetAddenda() []*ACHAddendum {
-	return p.Addenda
-}
-
-func (p *ACHPayment) SetAddenda(addenda []*ACHAddendum) {
-	p.Addenda = addenda
-}
+// Use direct field access for type-specific fields:
+// - p.RoutingNumber, p.AccountNumber, p.StandardEntryClassCode
+// - p.Addenda, p.CARSTASBETC, p.DNP
+//
+// Helper methods for common operations:
 
 // AddAddendum appends an addendum to the payment
 func (p *ACHPayment) AddAddendum(addendum *ACHAddendum) {
 	p.Addenda = append(p.Addenda, addendum)
 }
 
-func (p *ACHPayment) GetCARSTASBETC() []*CARSTASBETC {
-	return p.CARSTASBETC
-}
-
-func (p *ACHPayment) SetCARSTASBETC(cars []*CARSTASBETC) {
-	p.CARSTASBETC = cars
-}
-
 // AddCARSTASBETC appends a CARS/TAS/BETC record to the payment
 func (p *ACHPayment) AddCARSTASBETC(car *CARSTASBETC) {
 	p.CARSTASBETC = append(p.CARSTASBETC, car)
-}
-
-func (p *ACHPayment) GetDNP() *DNPRecord {
-	return p.DNP
-}
-
-func (p *ACHPayment) SetDNP(dnp *DNPRecord) {
-	p.DNP = dnp
 }
 
 // Validate validates the ACH payment
@@ -451,37 +403,14 @@ func (p *CheckPayment) GetReconcilement() string {
 	return p.Reconcilement
 }
 
-// Type-specific field accessors
-// NOTE: Direct field access is preferred in Go. Use p.Stub instead of p.GetCheckStub()
-// These methods are kept for backward compatibility but may be deprecated in future versions.
-
-func (p *CheckPayment) GetCheckStub() *CheckStub {
-	return p.Stub
-}
-
-func (p *CheckPayment) SetCheckStub(stub *CheckStub) {
-	p.Stub = stub
-}
-
-func (p *CheckPayment) GetCARSTASBETC() []*CARSTASBETC {
-	return p.CARSTASBETC
-}
-
-func (p *CheckPayment) SetCARSTASBETC(cars []*CARSTASBETC) {
-	p.CARSTASBETC = cars
-}
+// Use direct field access for type-specific fields:
+// - p.Stub, p.CARSTASBETC, p.DNP
+//
+// Helper methods for common operations:
 
 // AddCARSTASBETC appends a CARS/TAS/BETC record to the payment
 func (p *CheckPayment) AddCARSTASBETC(car *CARSTASBETC) {
 	p.CARSTASBETC = append(p.CARSTASBETC, car)
-}
-
-func (p *CheckPayment) GetDNP() *DNPRecord {
-	return p.DNP
-}
-
-func (p *CheckPayment) SetDNP(dnp *DNPRecord) {
-	p.DNP = dnp
 }
 
 // Validate validates the check payment
@@ -553,8 +482,8 @@ const (
 )
 
 // Type assertion helpers for cleaner code
-// Use direct type assertions: payment.(*ACHPayment) or schedule.(*ACHSchedule)
-// These helpers are retained for backward compatibility but may be deprecated
+// Direct type assertions are preferred: payment.(*ACHPayment) or schedule.(*ACHSchedule)
+// These helpers provide convenience but direct assertions are more idiomatic
 
 // AsACHPayment safely converts a Payment to *ACHPayment
 func AsACHPayment(payment Payment) (*ACHPayment, bool) {
