@@ -313,6 +313,18 @@ pamspr -create check -output sample_check.spr
 pamspr -convert -input payments.spr -output payments.json
 ```
 
+## Documentation
+
+### Technical Specification
+The complete PAM SPR file format specification is available in the `docs/` directory, organized into easily-navigable sections:
+
+- **[docs/README.md](docs/README.md)** - Complete specification index and navigation guide
+- **Core Specifications**: [01-general-instructions.md](docs/01-general-instructions.md) through [09-specification-notes.md](docs/09-specification-notes.md)
+- **Record Specifications**: [record-01-file-header.md](docs/record-01-file-header.md) through [record-12-file-trailer.md](docs/record-12-file-trailer.md)
+- **Reference Data**: [appendix-a-ach-transaction-codes.md](docs/appendix-a-ach-transaction-codes.md) through [appendix-e-paymenttypecode-values.md](docs/appendix-e-paymenttypecode-values.md)
+
+The specification includes detailed field definitions, validation rules, error codes, and agency-specific requirements extracted from the official Treasury documentation.
+
 ## File Format Specifications
 
 PAM SPR files use a hierarchical structure with fixed-width records:

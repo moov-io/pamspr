@@ -8,10 +8,21 @@ This is a Go library for working with Payment Automation Manager (PAM) Standard 
 
 ## Technical Specification
 
-The authoritative source of truth for the PAM SPR file format is defined in the document:
-`./docs/InputFileSpecifications-StandardPaymentRequest-5.0.2-v11.1.0-12-17-21.docx`
+The authoritative source of truth for the PAM SPR file format is defined in the structured documentation in the `./docs/` folder. The specification has been organized into separate, easily-referenced files:
 
-All file parsing, data models, and validation rules should be implemented according to this specification document. When in doubt, refer to this document for the correct implementation details.
+**Core Specification Files:**
+- `./docs/README.md` - Complete index and navigation guide
+- `./docs/01-general-instructions.md` through `./docs/09-specification-notes.md` - General requirements
+- `./docs/record-01-file-header.md` through `./docs/record-12-file-trailer.md` - Record specifications  
+- `./docs/appendix-a-ach-transaction-codes.md` through `./docs/appendix-e-paymenttypecode-values.md` - Reference data
+
+**IMPORTANT**: When implementing any feature, parsing logic, validation rules, or data structures, ALWAYS refer to the relevant specification files in `./docs/` first. These files contain the complete technical details including:
+- Field positions, lengths, and data types
+- Validation rules and error codes
+- Agency-specific requirements
+- Record structure and ordering requirements
+
+When in doubt about any implementation detail, consult the appropriate specification file before proceeding.
 
 ## Development Commands
 
