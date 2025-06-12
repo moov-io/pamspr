@@ -1,5 +1,11 @@
 // Package pamspr provides functionality for reading, writing, and validating
 // Payment Automation Manager (PAM) Standard Payment Request (SPR) files
+//
+// Design Philosophy:
+// - Prefer direct field access over getter/setter methods where possible
+// - Use interfaces only for polymorphic behavior (Schedule, Payment)
+// - Use type assertions to access type-specific fields: payment.(*ACHPayment).RoutingNumber
+// - Minimal interface design with essential methods only
 package pamspr
 
 import "fmt"
@@ -290,7 +296,10 @@ func (p *ACHPayment) GetReconcilement() string {
 	return p.Reconcilement
 }
 
-// ACHPaymentAccessor interface implementation
+// Type-specific field accessors
+// NOTE: Direct field access is preferred in Go. Use p.RoutingNumber instead of p.GetRoutingNumber()
+// These methods are kept for backward compatibility but may be deprecated in future versions.
+
 func (p *ACHPayment) GetRoutingNumber() string {
 	return p.RoutingNumber
 }
@@ -323,6 +332,7 @@ func (p *ACHPayment) SetAddenda(addenda []*ACHAddendum) {
 	p.Addenda = addenda
 }
 
+// AddAddendum appends an addendum to the payment
 func (p *ACHPayment) AddAddendum(addendum *ACHAddendum) {
 	p.Addenda = append(p.Addenda, addendum)
 }
@@ -335,6 +345,7 @@ func (p *ACHPayment) SetCARSTASBETC(cars []*CARSTASBETC) {
 	p.CARSTASBETC = cars
 }
 
+// AddCARSTASBETC appends a CARS/TAS/BETC record to the payment
 func (p *ACHPayment) AddCARSTASBETC(car *CARSTASBETC) {
 	p.CARSTASBETC = append(p.CARSTASBETC, car)
 }
@@ -440,7 +451,10 @@ func (p *CheckPayment) GetReconcilement() string {
 	return p.Reconcilement
 }
 
-// CheckPaymentAccessor interface implementation
+// Type-specific field accessors
+// NOTE: Direct field access is preferred in Go. Use p.Stub instead of p.GetCheckStub()
+// These methods are kept for backward compatibility but may be deprecated in future versions.
+
 func (p *CheckPayment) GetCheckStub() *CheckStub {
 	return p.Stub
 }
@@ -457,6 +471,7 @@ func (p *CheckPayment) SetCARSTASBETC(cars []*CARSTASBETC) {
 	p.CARSTASBETC = cars
 }
 
+// AddCARSTASBETC appends a CARS/TAS/BETC record to the payment
 func (p *CheckPayment) AddCARSTASBETC(car *CARSTASBETC) {
 	p.CARSTASBETC = append(p.CARSTASBETC, car)
 }
