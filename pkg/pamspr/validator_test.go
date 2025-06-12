@@ -690,13 +690,20 @@ func TestValidateAgencySpecific(t *testing.T) {
 		t.Error("Expected error for invalid IRS reconcilement length")
 	}
 
-	// Test other agencies (placeholder implementations)
-	err = validator.ValidateAgencySpecific(&ACHPayment{}, "VA")
+	// Test VA with valid reconcilement
+	validVAPayment := &ACHPayment{
+		Reconcilement: "01" + "02" + "A" + "B" + "CD" + "EF" + "123456789012" + strings.Repeat(" ", 78),
+	}
+	err = validator.ValidateAgencySpecific(validVAPayment, "VA")
 	if err != nil {
 		t.Errorf("Unexpected error for VA: %v", err)
 	}
 
-	err = validator.ValidateAgencySpecific(&ACHPayment{}, "SSA")
+	// Test SSA with valid reconcilement
+	validSSAPayment := &ACHPayment{
+		Reconcilement: "1" + "AB" + "C" + strings.Repeat(" ", 96),
+	}
+	err = validator.ValidateAgencySpecific(validSSAPayment, "SSA")
 	if err != nil {
 		t.Errorf("Unexpected error for SSA: %v", err)
 	}

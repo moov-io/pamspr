@@ -25,6 +25,7 @@ type Validator struct {
 	// Configuration
 	AllowedPaymentTypes map[string]bool
 	ValidALCs           map[string]bool
+	CustomAgencyRuleID  string // Agency-specific rule ID (e.g., "SSA-A", "SSA-Daily")
 }
 
 // NewValidator creates a new validator with default configuration
@@ -632,16 +633,198 @@ func (v *Validator) validateIRSPayment(payment Payment) error {
 }
 
 func (v *Validator) validateVAPayment(payment Payment) error {
-	// VA-specific validations are not currently implemented
-	// Future enhancements may add validation for VA payment requirements
-	_ = payment
+	recon := payment.GetReconcilement()
+
+	// Validate reconcilement field length
+	if len(recon) != 100 {
+		return ValidationError{
+			Field:   "Reconcilement",
+			Rule:    "va_recon_length",
+			Message: "VA reconcilement must be 100 characters",
+		}
+	}
+
+	// Parse VA reconcilement fields
+	parser := &AgencyReconcilementParser{}
+	isACH := false
+	if _, ok := payment.(*ACHPayment); ok {
+		isACH = true
+	}
+	fields := parser.ParseVAReconcilement(recon, isACH)
+
+	// Validate required Station Code (2 chars)
+	stationCode := fields["StationCode"]
+	if len(stationCode) == 0 {
+		return ValidationError{
+			Field:   "Reconcilement.StationCode",
+			Rule:    "va_station_required",
+			Message: "VA station code is required",
+		}
+	}
+	if len(stationCode) > 2 {
+		return ValidationError{
+			Field:   "Reconcilement.StationCode",
+			Rule:    "va_station_length",
+			Message: "VA station code must be 2 characters or less",
+		}
+	}
+	// TODO: Validate against approved VA station codes list when available
+	// Contact Treasury for valid station code ranges
+
+	// Validate required FIN Code (2 chars)
+	finCode := fields["FinCode"]
+	if len(finCode) == 0 {
+		return ValidationError{
+			Field:   "Reconcilement.FinCode",
+			Rule:    "va_fin_required",
+			Message: "VA FIN code is required",
+		}
+	}
+	if len(finCode) > 2 {
+		return ValidationError{
+			Field:   "Reconcilement.FinCode",
+			Rule:    "va_fin_length",
+			Message: "VA FIN code must be 2 characters or less",
+		}
+	}
+	// TODO: Validate against approved VA FIN codes list when available
+	// Contact Treasury for valid FIN code ranges
+
+	// Check payment specific validations
+	if _, ok := payment.(*CheckPayment); ok {
+		// Validate courtesy code for checks
+		courtesyCode := fields["CourtesyCode"]
+		if len(courtesyCode) > 1 {
+			return ValidationError{
+				Field:   "Reconcilement.CourtesyCode",
+				Rule:    "va_courtesy_length",
+				Message: "VA courtesy code must be 1 character or less",
+			}
+		}
+		// TODO: Validate against approved VA courtesy codes when available
+		// Contact Treasury for valid courtesy code values
+
+		// Validate appropriation code
+		appropCode := fields["AppropCode"]
+		if len(appropCode) > 1 {
+			return ValidationError{
+				Field:   "Reconcilement.AppropCode",
+				Rule:    "va_approp_length",
+				Message: "VA appropriation code must be 1 character or less",
+			}
+		}
+		// TODO: Validate against VA appropriation codes when available
+
+		// Validate policy number format
+		policyNum := fields["PolicyNum"]
+		if len(policyNum) > 2 {
+			return ValidationError{
+				Field:   "Reconcilement.PolicyNum",
+				Rule:    "va_policy_length",
+				Message: "VA policy number must be 2 characters or less",
+			}
+		}
+		// TODO: Implement policy number format validation when specifications available
+
+		// Validate name code for checks
+		nameCode := fields["NameCode"]
+		if len(nameCode) > 3 {
+			return ValidationError{
+				Field:   "Reconcilement.NameCode",
+				Rule:    "va_name_code_length",
+				Message: "VA name code must be 3 characters or less",
+			}
+		}
+	}
+
+	// Validate payment amount constraints
+	// TODO: Implement VA-specific payment amount limits when available
+	// TODO: Validate payment type restrictions for VA when available
+	// TODO: Implement cross-field validation rules when business requirements available
+
 	return nil
 }
 
 func (v *Validator) validateSSAPayment(payment Payment) error {
-	// SSA-specific validations are not currently implemented
-	// Future enhancements may add validation for SSA payment requirements
-	_ = payment
+	recon := payment.GetReconcilement()
+
+	// Validate reconcilement field length
+	if len(recon) != 100 {
+		return ValidationError{
+			Field:   "Reconcilement",
+			Rule:    "ssa_recon_length",
+			Message: "SSA reconcilement must be 100 characters",
+		}
+	}
+
+	// Get the agency rule ID to determine SSA variant
+	ruleID := v.CustomAgencyRuleID
+	if ruleID == "" {
+		ruleID = "SSA" // Default to standard SSA
+	}
+
+	// Parse SSA reconcilement fields
+	parser := &AgencyReconcilementParser{}
+	fields := parser.ParseSSAReconcilement(recon, ruleID)
+
+	// Validate Program Service Center Code (1 char, required)
+	pscCode := fields["ProgramServiceCenterCode"]
+	if len(pscCode) == 0 {
+		return ValidationError{
+			Field:   "Reconcilement.ProgramServiceCenterCode",
+			Rule:    "ssa_psc_required",
+			Message: "SSA program service center code is required",
+		}
+	}
+	if len(pscCode) > 1 {
+		return ValidationError{
+			Field:   "Reconcilement.ProgramServiceCenterCode",
+			Rule:    "ssa_psc_length",
+			Message: "SSA program service center code must be 1 character",
+		}
+	}
+	// TODO: Validate against approved SSA program service center codes when available
+	// Contact Treasury for valid PSC code values (typically 0-9, A-Z)
+
+	// Validate Payment ID Code (2 chars, required)
+	paymentIDCode := fields["PaymentIDCode"]
+	if len(paymentIDCode) == 0 {
+		return ValidationError{
+			Field:   "Reconcilement.PaymentIDCode",
+			Rule:    "ssa_payment_id_required",
+			Message: "SSA payment ID code is required",
+		}
+	}
+	if len(paymentIDCode) > 2 {
+		return ValidationError{
+			Field:   "Reconcilement.PaymentIDCode",
+			Rule:    "ssa_payment_id_length",
+			Message: "SSA payment ID code must be 2 characters or less",
+		}
+	}
+	// TODO: Validate against approved SSA payment ID codes when available
+	// Contact Treasury for valid payment ID code values
+
+	// TIN Indicator Offset validation (not applicable for SSA-A)
+	if ruleID != "SSA-A" {
+		tinOffset := fields["TINIndicatorOffset"]
+		if len(tinOffset) > 1 {
+			return ValidationError{
+				Field:   "Reconcilement.TINIndicatorOffset",
+				Rule:    "ssa_tin_offset_length",
+				Message: "SSA TIN indicator offset must be 1 character or less",
+			}
+		}
+		// TODO: Validate TIN offset values when business rules available
+		// Typically should be numeric or specific codes
+	}
+
+	// Validate payment type constraints for SSA
+	// TODO: Implement SSA-specific payment type restrictions when available
+	// TODO: Validate benefit type codes when specifications available
+	// TODO: Implement SSA payment amount limits when available
+	// TODO: Cross-validate PSC and Payment ID combinations when rules available
+
 	return nil
 }
 

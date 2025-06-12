@@ -66,6 +66,7 @@ type Payment interface {
 	GetPayeeName() string
 	GetRecordCode() string
 	GetPaymentType() PaymentType
+	GetReconcilement() string
 	Validate() error
 }
 
@@ -351,6 +352,11 @@ func (p *ACHPayment) GetPaymentType() PaymentType {
 	return PaymentTypeACH
 }
 
+// GetReconcilement returns the reconcilement field
+func (p *ACHPayment) GetReconcilement() string {
+	return p.Reconcilement
+}
+
 // ACHPaymentAccessor interface implementation
 func (p *ACHPayment) GetRoutingNumber() string {
 	return p.RoutingNumber
@@ -492,6 +498,11 @@ func (p *CheckPayment) GetRecordCode() string {
 // GetPaymentType returns the payment type
 func (p *CheckPayment) GetPaymentType() PaymentType {
 	return PaymentTypeCheck
+}
+
+// GetReconcilement returns the reconcilement field
+func (p *CheckPayment) GetReconcilement() string {
+	return p.Reconcilement
 }
 
 // CheckPaymentAccessor interface implementation
