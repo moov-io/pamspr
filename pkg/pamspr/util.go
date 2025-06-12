@@ -6,11 +6,8 @@ import (
 	"unicode"
 )
 
-// FieldPadding provides utilities for padding fields according to PAM SPR rules
-type FieldPadding struct{}
-
 // PadLeft pads a string on the left with the specified character
-func (fp *FieldPadding) PadLeft(s string, length int, padChar rune) string {
+func PadLeft(s string, length int, padChar rune) string {
 	if len(s) >= length {
 		return s[:length]
 	}
@@ -18,7 +15,7 @@ func (fp *FieldPadding) PadLeft(s string, length int, padChar rune) string {
 }
 
 // PadRight pads a string on the right with the specified character
-func (fp *FieldPadding) PadRight(s string, length int, padChar rune) string {
+func PadRight(s string, length int, padChar rune) string {
 	if len(s) >= length {
 		return s[:length]
 	}
@@ -26,7 +23,7 @@ func (fp *FieldPadding) PadRight(s string, length int, padChar rune) string {
 }
 
 // PadNumeric pads a numeric string with zeros on the left
-func (fp *FieldPadding) PadNumeric(s string, length int) string {
+func PadNumeric(s string, length int) string {
 	// Remove non-numeric characters
 	numeric := ""
 	for _, r := range s {
@@ -34,28 +31,25 @@ func (fp *FieldPadding) PadNumeric(s string, length int) string {
 			numeric += string(r)
 		}
 	}
-	return fp.PadLeft(numeric, length, '0')
+	return PadLeft(numeric, length, '0')
 }
 
 // TruncateOrPad truncates or pads a string to the exact length
-func (fp *FieldPadding) TruncateOrPad(s string, length int, padRight bool) string {
+func TruncateOrPad(s string, length int, padRight bool) string {
 	if padRight {
-		return fp.PadRight(s, length, ' ')
+		return PadRight(s, length, ' ')
 	}
-	return fp.PadLeft(s, length, ' ')
+	return PadLeft(s, length, ' ')
 }
 
-// FormatUtils provides formatting utilities
-type FormatUtils struct{}
-
-// FormatAmount converts cents to a formatted dollar string
-func (fu *FormatUtils) FormatAmount(cents int64) string {
+// FormatCents converts cents to a formatted dollar string
+func FormatCents(cents int64) string {
 	dollars := float64(cents) / 100.0
 	return fmt.Sprintf("%.2f", dollars)
 }
 
 // ParseAmount converts a dollar amount string to cents
-func (fu *FormatUtils) ParseAmount(amount string) (int64, error) {
+func ParseAmount(amount string) (int64, error) {
 	// Remove non-numeric characters except decimal point
 	cleaned := ""
 	hasDecimal := false
@@ -96,7 +90,7 @@ func (fu *FormatUtils) ParseAmount(amount string) (int64, error) {
 }
 
 // FormatTIN formats a TIN with dashes (for display only)
-func (fu *FormatUtils) FormatTIN(tin string, tinType string) string {
+func FormatTIN(tin string, tinType string) string {
 	// Remove non-numeric characters
 	cleaned := ""
 	for _, r := range tin {
@@ -120,7 +114,7 @@ func (fu *FormatUtils) FormatTIN(tin string, tinType string) string {
 }
 
 // CleanAddress removes special characters that might cause issues
-func (fu *FormatUtils) CleanAddress(addr string) string {
+func CleanAddress(addr string) string {
 	// Replace problematic characters
 	replacements := map[rune]rune{
 		'"': '\'',

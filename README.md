@@ -425,46 +425,38 @@ The library provides helpful utilities for common operations:
 
 ### Field Formatting
 ```go
-fp := &pamspr.FieldPadding{}
-
 // Pad left with zeros
-padded := fp.PadLeft("123", 5, '0') // "00123"
+padded := pamspr.PadLeft("123", 5, '0') // "00123"
 
 // Pad right with spaces  
-padded = fp.PadRight("ABC", 7, ' ') // "ABC    "
+padded = pamspr.PadRight("ABC", 7, ' ') // "ABC    "
 
 // Extract and pad numeric values
-numeric := fp.PadNumeric("ABC123DEF", 5) // "00123"
+numeric := pamspr.PadNumeric("ABC123DEF", 5) // "00123"
 ```
 
 ### Amount Handling
 ```go
-fu := &pamspr.FormatUtils{}
-
 // Convert cents to dollar string
-dollars := fu.FormatAmount(12345) // "123.45"
+dollars := pamspr.FormatCents(12345) // "123.45"
 
 // Parse dollar string to cents
-cents, err := fu.ParseAmount("$1,234.56") // 123456, nil
+cents, err := pamspr.ParseAmount("$1,234.56") // 123456, nil
 ```
 
 ### Address Cleaning
 ```go
-fu := &pamspr.FormatUtils{}
-
 // Clean problematic characters
-clean := fu.CleanAddress(`123 "Main" & <Company>`) // `123 'Main' + (Company)`
+clean := pamspr.CleanAddress(`123 "Main" & <Company>`) // `123 'Main' + (Company)`
 ```
 
 ### TIN Formatting
 ```go
-fu := &pamspr.FormatUtils{}
-
 // Format SSN
-ssn := fu.FormatTIN("123456789", "1") // "123-45-6789"
+ssn := pamspr.FormatTIN("123456789", "1") // "123-45-6789"
 
 // Format EIN  
-ein := fu.FormatTIN("123456789", "2") // "12-3456789"
+ein := pamspr.FormatTIN("123456789", "2") // "12-3456789"
 ```
 
 ## Testing

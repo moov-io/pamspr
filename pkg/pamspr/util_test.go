@@ -5,9 +5,8 @@ import (
 	"testing"
 )
 
-// TestFieldPadding_PadLeft tests left padding functionality
-func TestFieldPadding_PadLeft(t *testing.T) {
-	fp := &FieldPadding{}
+// TestPadLeft tests left padding functionality
+func TestPadLeft(t *testing.T) {
 
 	tests := []struct {
 		name     string
@@ -28,7 +27,7 @@ func TestFieldPadding_PadLeft(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := fp.PadLeft(tt.input, tt.length, tt.padChar)
+			result := PadLeft(tt.input, tt.length, tt.padChar)
 			if result != tt.expected {
 				t.Errorf("PadLeft(%q, %d, %q) = %q, want %q", tt.input, tt.length, tt.padChar, result, tt.expected)
 			}
@@ -39,9 +38,8 @@ func TestFieldPadding_PadLeft(t *testing.T) {
 	}
 }
 
-// TestFieldPadding_PadRight tests right padding functionality
-func TestFieldPadding_PadRight(t *testing.T) {
-	fp := &FieldPadding{}
+// TestPadRight tests right padding functionality
+func TestPadRight(t *testing.T) {
 
 	tests := []struct {
 		name     string
@@ -62,7 +60,7 @@ func TestFieldPadding_PadRight(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := fp.PadRight(tt.input, tt.length, tt.padChar)
+			result := PadRight(tt.input, tt.length, tt.padChar)
 			if result != tt.expected {
 				t.Errorf("PadRight(%q, %d, %q) = %q, want %q", tt.input, tt.length, tt.padChar, result, tt.expected)
 			}
@@ -73,9 +71,8 @@ func TestFieldPadding_PadRight(t *testing.T) {
 	}
 }
 
-// TestFieldPadding_PadNumeric tests numeric padding functionality
-func TestFieldPadding_PadNumeric(t *testing.T) {
-	fp := &FieldPadding{}
+// TestPadNumeric tests numeric padding functionality
+func TestPadNumeric(t *testing.T) {
 
 	tests := []struct {
 		name     string
@@ -100,7 +97,7 @@ func TestFieldPadding_PadNumeric(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := fp.PadNumeric(tt.input, tt.length)
+			result := PadNumeric(tt.input, tt.length)
 			if result != tt.expected {
 				t.Errorf("PadNumeric(%q, %d) = %q, want %q", tt.input, tt.length, result, tt.expected)
 			}
@@ -111,9 +108,8 @@ func TestFieldPadding_PadNumeric(t *testing.T) {
 	}
 }
 
-// TestFieldPadding_TruncateOrPad tests truncation and padding
-func TestFieldPadding_TruncateOrPad(t *testing.T) {
-	fp := &FieldPadding{}
+// TestTruncateOrPad tests truncation and padding
+func TestTruncateOrPad(t *testing.T) {
 
 	tests := []struct {
 		name     string
@@ -134,7 +130,7 @@ func TestFieldPadding_TruncateOrPad(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := fp.TruncateOrPad(tt.input, tt.length, tt.padRight)
+			result := TruncateOrPad(tt.input, tt.length, tt.padRight)
 			if result != tt.expected {
 				t.Errorf("TruncateOrPad(%q, %d, %t) = %q, want %q", tt.input, tt.length, tt.padRight, result, tt.expected)
 			}
@@ -145,9 +141,8 @@ func TestFieldPadding_TruncateOrPad(t *testing.T) {
 	}
 }
 
-// TestFormatUtils_FormatAmount tests amount formatting to dollar strings
-func TestFormatUtils_FormatAmount(t *testing.T) {
-	fu := &FormatUtils{}
+// TestFormatCents tests amount formatting to dollar strings
+func TestFormatCents(t *testing.T) {
 
 	tests := []struct {
 		name     string
@@ -167,17 +162,16 @@ func TestFormatUtils_FormatAmount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := fu.FormatAmount(tt.cents)
+			result := FormatCents(tt.cents)
 			if result != tt.expected {
-				t.Errorf("FormatAmount(%d) = %q, want %q", tt.cents, result, tt.expected)
+				t.Errorf("FormatCents(%d) = %q, want %q", tt.cents, result, tt.expected)
 			}
 		})
 	}
 }
 
-// TestFormatUtils_ParseAmount tests parsing dollar amounts to cents
-func TestFormatUtils_ParseAmount(t *testing.T) {
-	fu := &FormatUtils{}
+// TestParseAmount tests parsing dollar amounts to cents
+func TestParseAmount(t *testing.T) {
 
 	tests := []struct {
 		name     string
@@ -206,7 +200,7 @@ func TestFormatUtils_ParseAmount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := fu.ParseAmount(tt.input)
+			result, err := ParseAmount(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseAmount(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
 				return
@@ -218,9 +212,8 @@ func TestFormatUtils_ParseAmount(t *testing.T) {
 	}
 }
 
-// TestFormatUtils_FormatTIN tests TIN formatting with dashes
-func TestFormatUtils_FormatTIN(t *testing.T) {
-	fu := &FormatUtils{}
+// TestFormatTIN tests TIN formatting with dashes
+func TestFormatTIN(t *testing.T) {
 
 	tests := []struct {
 		name     string
@@ -245,7 +238,7 @@ func TestFormatUtils_FormatTIN(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := fu.FormatTIN(tt.tin, tt.tinType)
+			result := FormatTIN(tt.tin, tt.tinType)
 			if result != tt.expected {
 				t.Errorf("FormatTIN(%q, %q) = %q, want %q", tt.tin, tt.tinType, result, tt.expected)
 			}
@@ -253,9 +246,8 @@ func TestFormatUtils_FormatTIN(t *testing.T) {
 	}
 }
 
-// TestFormatUtils_CleanAddress tests address cleaning functionality
-func TestFormatUtils_CleanAddress(t *testing.T) {
-	fu := &FormatUtils{}
+// TestCleanAddress tests address cleaning functionality
+func TestCleanAddress(t *testing.T) {
 
 	tests := []struct {
 		name     string
@@ -281,7 +273,7 @@ func TestFormatUtils_CleanAddress(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := fu.CleanAddress(tt.input)
+			result := CleanAddress(tt.input)
 			if result != tt.expected {
 				t.Errorf("CleanAddress(%q) = %q, want %q", tt.input, result, tt.expected)
 			}
@@ -794,35 +786,35 @@ func TestAgencyReconcilementParser_ParseSSAReconcilement(t *testing.T) {
 	}
 }
 
-// BenchmarkFieldPadding_PadLeft benchmarks left padding performance
-func BenchmarkFieldPadding_PadLeft(b *testing.B) {
-	fp := &FieldPadding{}
+// BenchmarkPadLeft benchmarks left padding performance
+func BenchmarkPadLeft(b *testing.B) {
+
 	for i := 0; i < b.N; i++ {
-		fp.PadLeft("test", 10, '0')
+		PadLeft("test", 10, '0')
 	}
 }
 
-// BenchmarkFieldPadding_PadNumeric benchmarks numeric padding performance
-func BenchmarkFieldPadding_PadNumeric(b *testing.B) {
-	fp := &FieldPadding{}
+// BenchmarkPadNumeric benchmarks numeric padding performance
+func BenchmarkPadNumeric(b *testing.B) {
+
 	for i := 0; i < b.N; i++ {
-		fp.PadNumeric("ABC123DEF456", 10)
+		PadNumeric("ABC123DEF456", 10)
 	}
 }
 
-// BenchmarkFormatUtils_ParseAmount benchmarks amount parsing performance
-func BenchmarkFormatUtils_ParseAmount(b *testing.B) {
-	fu := &FormatUtils{}
+// BenchmarkParseAmount benchmarks amount parsing performance
+func BenchmarkParseAmount(b *testing.B) {
+
 	for i := 0; i < b.N; i++ {
-		fu.ParseAmount("$1,234.56")
+		ParseAmount("$1,234.56")
 	}
 }
 
-// BenchmarkFormatUtils_CleanAddress benchmarks address cleaning performance
-func BenchmarkFormatUtils_CleanAddress(b *testing.B) {
-	fu := &FormatUtils{}
+// BenchmarkCleanAddress benchmarks address cleaning performance
+func BenchmarkCleanAddress(b *testing.B) {
+
 	address := `123 "Main" Street & <Company> Name`
 	for i := 0; i < b.N; i++ {
-		fu.CleanAddress(address)
+		CleanAddress(address)
 	}
 }
