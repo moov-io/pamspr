@@ -383,13 +383,15 @@ func (w *Writer) formatFieldNoJustify(value string, length int) string {
 
 // formatNumeric formats a numeric field with right justification and zero padding
 func (w *Writer) formatNumeric(value string, length int) string {
-	// Remove non-numeric characters
-	numeric := ""
+	// Remove non-numeric characters using strings.Builder for efficiency
+	var builder strings.Builder
+	builder.Grow(len(value)) // Pre-allocate capacity
 	for _, r := range value {
 		if r >= '0' && r <= '9' {
-			numeric += string(r)
+			builder.WriteRune(r)
 		}
 	}
+	numeric := builder.String()
 
 	if len(numeric) > length {
 		return numeric[:length]

@@ -818,3 +818,12 @@ func BenchmarkCleanAddress(b *testing.B) {
 		CleanAddress(address)
 	}
 }
+
+// BenchmarkFormatTIN benchmarks TIN formatting performance
+func BenchmarkFormatTIN(b *testing.B) {
+
+	tin := "12-34-56789"
+	for i := 0; i < b.N; i++ {
+		FormatTIN(tin, "1")
+	}
+}

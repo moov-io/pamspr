@@ -24,14 +24,15 @@ func PadRight(s string, length int, padChar rune) string {
 
 // PadNumeric pads a numeric string with zeros on the left
 func PadNumeric(s string, length int) string {
-	// Remove non-numeric characters
-	numeric := ""
+	// Remove non-numeric characters using strings.Builder for efficiency
+	var builder strings.Builder
+	builder.Grow(len(s)) // Pre-allocate capacity
 	for _, r := range s {
 		if unicode.IsDigit(r) {
-			numeric += string(r)
+			builder.WriteRune(r)
 		}
 	}
-	return PadLeft(numeric, length, '0')
+	return PadLeft(builder.String(), length, '0')
 }
 
 // TruncateOrPad truncates or pads a string to the exact length
@@ -50,17 +51,19 @@ func FormatCents(cents int64) string {
 
 // ParseAmount converts a dollar amount string to cents
 func ParseAmount(amount string) (int64, error) {
-	// Remove non-numeric characters except decimal point
-	cleaned := ""
+	// Remove non-numeric characters except decimal point using strings.Builder
+	var builder strings.Builder
+	builder.Grow(len(amount)) // Pre-allocate capacity
 	hasDecimal := false
 	for _, r := range amount {
 		if unicode.IsDigit(r) {
-			cleaned += string(r)
+			builder.WriteRune(r)
 		} else if r == '.' && !hasDecimal {
 			hasDecimal = true
-			cleaned += string(r)
+			builder.WriteRune(r)
 		}
 	}
+	cleaned := builder.String()
 
 	// Parse as float and convert to cents
 	var cents int64
@@ -91,13 +94,15 @@ func ParseAmount(amount string) (int64, error) {
 
 // FormatTIN formats a TIN with dashes (for display only)
 func FormatTIN(tin string, tinType string) string {
-	// Remove non-numeric characters
-	cleaned := ""
+	// Remove non-numeric characters using strings.Builder
+	var builder strings.Builder
+	builder.Grow(9) // TINs are 9 digits max
 	for _, r := range tin {
 		if unicode.IsDigit(r) {
-			cleaned += string(r)
+			builder.WriteRune(r)
 		}
 	}
+	cleaned := builder.String()
 
 	if len(cleaned) != 9 {
 		return tin // Return as-is if not 9 digits
@@ -123,16 +128,19 @@ func CleanAddress(addr string) string {
 		'&': '+',
 	}
 
-	result := ""
+	// Use strings.Builder for efficient string building
+	var builder strings.Builder
+	builder.Grow(len(addr)) // Pre-allocate capacity
 	for _, r := range addr {
 		if replacement, ok := replacements[r]; ok {
-			result += string(replacement)
+			builder.WriteRune(replacement)
 		} else if r >= 0x20 && r <= 0x7E { // Printable ASCII
-			result += string(r)
+			builder.WriteRune(r)
 		} else {
-			result += " " // Replace non-printable with space
+			builder.WriteRune(' ') // Replace non-printable with space
 		}
 	}
+	result := builder.String()
 
 	// Trim and collapse multiple spaces
 	result = strings.TrimSpace(result)
