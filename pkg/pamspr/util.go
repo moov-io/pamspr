@@ -6,7 +6,8 @@ import (
 	"unicode"
 )
 
-// PadLeft pads a string on the left with the specified character
+// PadLeft is deprecated - use SecurePadLeft instead
+// Kept only for tests that explicitly test padding behavior
 func PadLeft(s string, length int, padChar rune) string {
 	if len(s) >= length {
 		return s[:length]
@@ -14,7 +15,8 @@ func PadLeft(s string, length int, padChar rune) string {
 	return strings.Repeat(string(padChar), length-len(s)) + s
 }
 
-// PadRight pads a string on the right with the specified character
+// PadRight is deprecated - use SecurePadRight instead
+// Kept only for tests that explicitly test padding behavior
 func PadRight(s string, length int, padChar rune) string {
 	if len(s) >= length {
 		return s[:length]
@@ -22,7 +24,8 @@ func PadRight(s string, length int, padChar rune) string {
 	return s + strings.Repeat(string(padChar), length-len(s))
 }
 
-// PadNumeric pads a numeric string with zeros on the left
+// PadNumeric is deprecated - use SecurePadNumeric instead
+// Kept only for tests that explicitly test padding behavior
 func PadNumeric(s string, length int) string {
 	// Remove non-numeric characters using strings.Builder for efficiency
 	var builder strings.Builder
@@ -35,7 +38,8 @@ func PadNumeric(s string, length int) string {
 	return PadLeft(builder.String(), length, '0')
 }
 
-// TruncateOrPad truncates or pads a string to the exact length
+// TruncateOrPad is deprecated - use SecureTruncateOrPad instead
+// Kept only for tests that explicitly test padding behavior
 func TruncateOrPad(s string, length int, padRight bool) string {
 	if padRight {
 		return PadRight(s, length, ' ')

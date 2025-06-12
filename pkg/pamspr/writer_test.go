@@ -54,7 +54,7 @@ func TestWriter_Write_CompleteACHFile(t *testing.T) {
 			&ACHSchedule{
 				Header: &ACHScheduleHeader{
 					RecordCode:              "01",
-					AgencyACHText:           "TREAS",
+					AgencyACHText:           "TREA",
 					ScheduleNumber:          "00000000123456",
 					PaymentTypeCode:         "Vendor",
 					StandardEntryClassCode:  "CCD",
@@ -484,22 +484,31 @@ func TestWriter_formatField(t *testing.T) {
 	writer := NewWriter(&buf)
 
 	tests := []struct {
-		name     string
-		value    string
-		length   int
-		expected string
+		name        string
+		value       string
+		length      int
+		expected    string
+		shouldPanic bool
 	}{
-		{"short value padded", "ABC", 5, "ABC  "},
-		{"exact length", "ABCDE", 5, "ABCDE"},
-		{"truncated", "ABCDEFGH", 5, "ABCDE"},
-		{"empty value", "", 3, "   "},
-		{"spaces preserved", "A B", 5, "A B  "},
+		{"short value padded", "ABC", 5, "ABC  ", false},
+		{"exact length", "ABCDE", 5, "ABCDE", false},
+		{"truncated", "ABCDEFGH", 5, "ABCDE", false}, // Returns truncated value but accumulates error
+		{"empty value", "", 3, "   ", false},
+		{"spaces preserved", "A B", 5, "A B  ", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.shouldPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("formatField(%q, %d) should have panicked but didn't", tt.value, tt.length)
+					}
+				}()
+			}
+
 			result := writer.formatField(tt.value, tt.length)
-			if result != tt.expected {
+			if !tt.shouldPanic && result != tt.expected {
 				t.Errorf("formatField(%q, %d) = %q, want %q", tt.value, tt.length, result, tt.expected)
 			}
 		})
@@ -512,24 +521,34 @@ func TestWriter_formatFieldRightJustified(t *testing.T) {
 	writer := NewWriter(&buf)
 
 	tests := []struct {
-		name     string
-		value    string
-		length   int
-		padChar  rune
-		expected string
+		name        string
+		value       string
+		length      int
+		padChar     rune
+		expected    string
+		shouldPanic bool
 	}{
-		{"zeros padding", "123", 5, '0', "00123"},
-		{"spaces padding", "ABC", 5, ' ', "  ABC"},
-		{"exact length", "12345", 5, '0', "12345"},
-		{"truncated", "123456", 5, '0', "12345"},
-		{"empty value", "", 3, '0', "000"},
-		{"trim spaces", "  123  ", 5, '0', "00123"},
+		{"zeros padding", "123", 5, '0', "00123", false},
+		{"spaces padding", "ABC", 5, ' ', "  ABC", false},
+		{"exact length", "12345", 5, '0', "12345", false},
+		{"truncated", "123456", 5, '0', "12345", false}, // Returns truncated value but accumulates error
+		{"empty value", "", 3, '0', "000", false},
+		{"trim spaces", "  123  ", 5, '0', "00123", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.shouldPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("formatFieldRightJustified(%q, %d, %q) should have panicked but didn't",
+							tt.value, tt.length, tt.padChar)
+					}
+				}()
+			}
+
 			result := writer.formatFieldRightJustified(tt.value, tt.length, tt.padChar)
-			if result != tt.expected {
+			if !tt.shouldPanic && result != tt.expected {
 				t.Errorf("formatFieldRightJustified(%q, %d, %q) = %q, want %q",
 					tt.value, tt.length, tt.padChar, result, tt.expected)
 			}
@@ -543,22 +562,31 @@ func TestWriter_formatFieldNoJustify(t *testing.T) {
 	writer := NewWriter(&buf)
 
 	tests := []struct {
-		name     string
-		value    string
-		length   int
-		expected string
+		name        string
+		value       string
+		length      int
+		expected    string
+		shouldPanic bool
 	}{
-		{"short value padded", "ABC", 5, "ABC  "},
-		{"exact length", "ABCDE", 5, "ABCDE"},
-		{"truncated", "ABCDEFGH", 5, "ABCDE"},
-		{"empty value", "", 3, "   "},
-		{"preserves internal spaces", "A  B", 5, "A  B "},
+		{"short value padded", "ABC", 5, "ABC  ", false},
+		{"exact length", "ABCDE", 5, "ABCDE", false},
+		{"truncated", "ABCDEFGH", 5, "ABCDE", false}, // Returns truncated value but accumulates error
+		{"empty value", "", 3, "   ", false},
+		{"preserves internal spaces", "A  B", 5, "A  B ", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.shouldPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("formatFieldNoJustify(%q, %d) should have panicked but didn't", tt.value, tt.length)
+					}
+				}()
+			}
+
 			result := writer.formatFieldNoJustify(tt.value, tt.length)
-			if result != tt.expected {
+			if !tt.shouldPanic && result != tt.expected {
 				t.Errorf("formatFieldNoJustify(%q, %d) = %q, want %q", tt.value, tt.length, result, tt.expected)
 			}
 		})
@@ -571,24 +599,33 @@ func TestWriter_formatNumeric(t *testing.T) {
 	writer := NewWriter(&buf)
 
 	tests := []struct {
-		name     string
-		value    string
-		length   int
-		expected string
+		name        string
+		value       string
+		length      int
+		expected    string
+		shouldPanic bool
 	}{
-		{"simple number", "123", 5, "00123"},
-		{"with non-numeric", "12-34", 6, "001234"},
-		{"letters removed", "ABC123DEF", 5, "00123"},
-		{"empty string", "", 3, "000"},
-		{"all non-numeric", "ABC", 3, "000"},
-		{"truncated", "123456789", 5, "12345"},
-		{"spaces removed", "1 2 3", 5, "00123"},
+		{"simple number", "123", 5, "00123", false},
+		{"with non-numeric", "12-34", 6, "001234", false},
+		{"letters removed", "ABC123DEF", 5, "00123", false},
+		{"empty string", "", 3, "000", false},
+		{"all non-numeric", "ABC", 3, "000", false},
+		{"truncated", "123456789", 5, "12345", false}, // Returns truncated value but accumulates error
+		{"spaces removed", "1 2 3", 5, "00123", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.shouldPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("formatNumeric(%q, %d) should have panicked but didn't", tt.value, tt.length)
+					}
+				}()
+			}
+
 			result := writer.formatNumeric(tt.value, tt.length)
-			if result != tt.expected {
+			if !tt.shouldPanic && result != tt.expected {
 				t.Errorf("formatNumeric(%q, %d) = %q, want %q", tt.value, tt.length, result, tt.expected)
 			}
 		})
@@ -601,22 +638,31 @@ func TestWriter_formatAmount(t *testing.T) {
 	writer := NewWriter(&buf)
 
 	tests := []struct {
-		name     string
-		cents    int64
-		length   int
-		expected string
+		name        string
+		cents       int64
+		length      int
+		expected    string
+		shouldPanic bool
 	}{
-		{"simple amount", 12345, 10, "0000012345"},
-		{"zero amount", 0, 8, "00000000"},
-		{"large amount", 9999999999, 10, "9999999999"},
-		{"negative amount", -12345, 10, "0000012345"}, // Note: negatives become positive
-		{"truncated", 123456789012, 10, "1234567890"},
+		{"simple amount", 12345, 10, "0000012345", false},
+		{"zero amount", 0, 8, "00000000", false},
+		{"large amount", 9999999999, 10, "9999999999", false},
+		{"negative amount", -12345, 10, "0000012345", false}, // Note: negatives become positive
+		{"truncated", 123456789012, 10, "1234567890", false}, // Returns truncated value but accumulates error
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.shouldPanic {
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("formatAmount(%d, %d) should have panicked but didn't", tt.cents, tt.length)
+					}
+				}()
+			}
+
 			result := writer.formatAmount(tt.cents, tt.length)
-			if result != tt.expected {
+			if !tt.shouldPanic && result != tt.expected {
 				t.Errorf("formatAmount(%d, %d) = %q, want %q", tt.cents, tt.length, result, tt.expected)
 			}
 		})
@@ -786,15 +832,37 @@ func TestWriter_FieldPaddingEdgeCases(t *testing.T) {
 	// Test with maximum length values
 	maxString := strings.Repeat("A", 1000) // Much longer than any field
 
-	result := writer.formatField(maxString, 10)
-	if len(result) != 10 {
-		t.Errorf("formatField with oversized input should truncate to exact length, got %d", len(result))
-	}
+	// Test that oversized input returns truncated value and accumulates error
+	t.Run("formatField with oversized input", func(t *testing.T) {
+		result := writer.formatField(maxString, 10)
+		if len(result) != 10 {
+			t.Errorf("formatField should return truncated value of length 10, got %d", len(result))
+		}
+		if len(writer.errors) == 0 {
+			t.Errorf("formatField should accumulate error for oversized input")
+		}
+	})
 
-	result = writer.formatFieldRightJustified(maxString, 10, '0')
-	if len(result) != 10 {
-		t.Errorf("formatFieldRightJustified with oversized input should truncate to exact length, got %d", len(result))
-	}
+	t.Run("formatFieldRightJustified with oversized input", func(t *testing.T) {
+		// Clear previous errors
+		writer.errors = writer.errors[:0]
+		result := writer.formatFieldRightJustified(maxString, 10, '0')
+		if len(result) != 10 {
+			t.Errorf("formatFieldRightJustified should return truncated value of length 10, got %d", len(result))
+		}
+		if len(writer.errors) == 0 {
+			t.Errorf("formatFieldRightJustified should accumulate error for oversized input")
+		}
+	})
+
+	// Test exact length (should not panic)
+	t.Run("exact length", func(t *testing.T) {
+		exactString := strings.Repeat("B", 10)
+		result := writer.formatField(exactString, 10)
+		if len(result) != 10 {
+			t.Errorf("formatField with exact length should return exact length, got %d", len(result))
+		}
+	})
 }
 
 // TestWriter_AllRecordTypes tests that all record types can be written

@@ -322,10 +322,15 @@ func (r *Reader) parseCheckSchedule(headerLine string) (*CheckSchedule, error) {
 
 // Helper methods (keep only essential ones used by this file)
 func (r *Reader) extractField(line string, start, end int) string {
-	if start > len(line) || end > len(line) {
+	// Use the secure extraction with strict security configuration
+	field := FieldDefinition{Start: start, End: end}
+	value, err := SecureExtractField(line, field, "field", DefaultSecurityConfig())
+	if err != nil {
+		// Log error and return empty string
+		// TODO: Add proper error handling/logging
 		return ""
 	}
-	return line[start-1 : end]
+	return value
 }
 
 func (r *Reader) parseAmount(s string) int64 {

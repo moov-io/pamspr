@@ -127,8 +127,11 @@ func (p *ACHParser) ParseACHAddendum(line string) (*ACHAddendum, error) {
 
 // Helper function for extracting fields by position (legacy support)
 func extractFieldByPosition(line string, start, end int) string {
-	if start > len(line) || end > len(line) {
+	field := FieldDefinition{Start: start, End: end}
+	value, err := SecureExtractField(line, field, "field", DefaultSecurityConfig())
+	if err != nil {
+		// TODO: Add proper error handling/logging
 		return ""
 	}
-	return line[start-1 : end]
+	return value
 }

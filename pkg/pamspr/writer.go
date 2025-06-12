@@ -27,6 +27,9 @@ func NewWriter(w io.Writer) *Writer {
 
 // Write writes a complete PAM SPR file
 func (w *Writer) Write(file *File) error {
+	// Clear any previous errors
+	w.errors = w.errors[:0]
+
 	// Validate file structure before writing
 	if err := w.validator.ValidateFileStructure(file); err != nil {
 		return fmt.Errorf("file validation: %w", err)
@@ -47,6 +50,12 @@ func (w *Writer) Write(file *File) error {
 	// Write file trailer
 	if err := w.writeFileTrailer(file.Trailer); err != nil {
 		return fmt.Errorf("writing file trailer: %w", err)
+	}
+
+	// Check for accumulated formatting errors
+	if len(w.errors) > 0 {
+		// Return the first error (they're all likely similar truncation issues)
+		return fmt.Errorf("field formatting errors occurred: %w", w.errors[0])
 	}
 
 	return nil
@@ -355,48 +364,63 @@ func (w *Writer) writeFileTrailer(trailer *FileTrailer) error {
 
 // formatField formats a field with left justification and blank padding
 func (w *Writer) formatField(value string, length int) string {
-	if len(value) > length {
-		return value[:length]
+	result, err := SecureFormatField(value, length, "field", DefaultSecurityConfig())
+	if err != nil {
+		// Store error for later handling
+		w.errors = append(w.errors, fmt.Errorf("formatting field of length %d: %w", length, err))
+		// Return truncated value to continue processing
+		if len(value) > length {
+			return value[:length]
+		}
+		return value
 	}
-	return value + strings.Repeat(" ", length-len(value))
+	return result
 }
 
 // formatFieldRightJustified formats a field with right justification
 func (w *Writer) formatFieldRightJustified(value string, length int, padChar rune) string {
 	value = strings.TrimSpace(value)
-	if len(value) > length {
-		return value[:length]
+	result, err := SecurePadLeft(value, length, padChar, "field")
+	if err != nil {
+		// Store error for later handling
+		w.errors = append(w.errors, fmt.Errorf("formatting right-justified field of length %d: %w", length, err))
+		// Return truncated value to continue processing
+		if len(value) > length {
+			return value[:length]
+		}
+		return value
 	}
-	return strings.Repeat(string(padChar), length-len(value)) + value
+	return result
 }
 
 // formatFieldNoJustify returns the field value as-is, padded to length
 func (w *Writer) formatFieldNoJustify(value string, length int) string {
-	if len(value) > length {
-		return value[:length]
+	result, err := SecureFormatField(value, length, "field", DefaultSecurityConfig())
+	if err != nil {
+		// Store error for later handling
+		w.errors = append(w.errors, fmt.Errorf("formatting no-justify field of length %d: %w", length, err))
+		// Return truncated value to continue processing
+		if len(value) > length {
+			return value[:length]
+		}
+		return value
 	}
-	if len(value) < length {
-		return value + strings.Repeat(" ", length-len(value))
-	}
-	return value
+	return result
 }
 
 // formatNumeric formats a numeric field with right justification and zero padding
 func (w *Writer) formatNumeric(value string, length int) string {
-	// Remove non-numeric characters using strings.Builder for efficiency
-	var builder strings.Builder
-	builder.Grow(len(value)) // Pre-allocate capacity
-	for _, r := range value {
-		if r >= '0' && r <= '9' {
-			builder.WriteRune(r)
+	result, err := SecurePadNumeric(value, length, "field")
+	if err != nil {
+		// Store error for later handling
+		w.errors = append(w.errors, fmt.Errorf("formatting numeric field of length %d: %w", length, err))
+		// Return truncated value to continue processing
+		if len(value) > length {
+			return value[:length]
 		}
+		return value
 	}
-	numeric := builder.String()
-
-	if len(numeric) > length {
-		return numeric[:length]
-	}
-	return strings.Repeat("0", length-len(numeric)) + numeric
+	return result
 }
 
 // formatAmount formats an amount field (in cents) with right justification and zero padding

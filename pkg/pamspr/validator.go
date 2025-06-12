@@ -102,76 +102,7 @@ func NewValidator() *Validator {
 }
 
 // File Structure Validations
-func (v *Validator) ValidateFileStructure(file *File) error {
-	// Rule: File must have header and trailer
-	if file.Header == nil {
-		return NewFieldRequiredError("FileHeader")
-	}
-	if file.Trailer == nil {
-		return NewFieldRequiredError("FileTrailer")
-	}
-
-	// Rule: A schedule can contain only one type of payment
-	for i, schedule := range file.Schedules {
-		switch s := schedule.(type) {
-		case *ACHSchedule:
-			for _, payment := range s.Payments {
-				if _, ok := payment.(*ACHPayment); !ok {
-					return ValidationError{
-						Field:   fmt.Sprintf("Schedule[%d]", i),
-						Rule:    "payment_type_consistency",
-						Message: "ACH schedule cannot contain non-ACH payments",
-					}
-				}
-			}
-		case *CheckSchedule:
-			for _, payment := range s.Payments {
-				if _, ok := payment.(*CheckPayment); !ok {
-					return ValidationError{
-						Field:   fmt.Sprintf("Schedule[%d]", i),
-						Rule:    "payment_type_consistency",
-						Message: "Check schedule cannot contain non-Check payments",
-					}
-				}
-			}
-		}
-	}
-
-	// Rule: ACH payments must be in routing number order within schedule
-	for i, schedule := range file.Schedules {
-		if achSchedule, ok := schedule.(*ACHSchedule); ok {
-			if err := v.validateACHPaymentOrder(achSchedule); err != nil {
-				return ValidationError{
-					Field:   fmt.Sprintf("Schedule[%d]", i),
-					Rule:    "routing_number_order",
-					Message: err.Error(),
-				}
-			}
-		}
-	}
-
-	// Rule: Same Day ACH validation
-	if file.Header != nil && file.Header.IsRequestedForSameDayACH == "1" {
-		if err := v.ValidateSameDayACH(file); err != nil {
-			return err
-		}
-	}
-
-	// Rule: CTX payment validation
-	for _, schedule := range file.Schedules {
-		if achSchedule, ok := schedule.(*ACHSchedule); ok {
-			for _, payment := range achSchedule.Payments {
-				if achPayment, ok := payment.(*ACHPayment); ok {
-					if err := v.ValidateCTXAddendum(achPayment); err != nil {
-						return err
-					}
-				}
-			}
-		}
-	}
-
-	return nil
-}
+// ValidateFileStructure is now in validator_structure.go
 
 // Field-level validations
 func (v *Validator) ValidateFileHeader(header *FileHeader) error {
@@ -186,22 +117,22 @@ func (v *Validator) ValidateFileHeader(header *FileHeader) error {
 	}
 
 	// Version validation
-	if header.StandardPaymentVersion != "502" {
+	if header.StandardPaymentVersion != CurrentSPRVersion {
 		return ValidationError{
 			Field:   "StandardPaymentVersion",
 			Value:   header.StandardPaymentVersion,
 			Rule:    "version",
-			Message: "current published version must be '502'",
+			Message: fmt.Sprintf("current published version must be '%s'", CurrentSPRVersion),
 		}
 	}
 
 	// Same Day ACH flag validation
-	if header.IsRequestedForSameDayACH != "0" && header.IsRequestedForSameDayACH != "1" && header.IsRequestedForSameDayACH != "" {
+	if header.IsRequestedForSameDayACH != SDAFlagDisabled && header.IsRequestedForSameDayACH != SDAFlagEnabled && header.IsRequestedForSameDayACH != "" {
 		return ValidationError{
 			Field:   "IsRequestedForSameDayACH",
 			Value:   header.IsRequestedForSameDayACH,
 			Rule:    "valid_values",
-			Message: "must be '0', '1', or blank",
+			Message: fmt.Sprintf("must be '%s', '%s', or blank", SDAFlagDisabled, SDAFlagEnabled),
 		}
 	}
 
@@ -245,13 +176,7 @@ func (v *Validator) ValidateACHPayment(payment *ACHPayment) error {
 	}
 
 	// ACH Transaction code validation
-	validTransactionCodes := map[string]bool{
-		"22": true, "23": true, "24": true,
-		"32": true, "33": true, "34": true,
-		"42": true, "43": true,
-		"52": true, "53": true,
-	}
-	if !validTransactionCodes[payment.ACH_TransactionCode] {
+	if !ValidACHTransactionCodes[payment.ACH_TransactionCode] {
 		return ValidationError{
 			Field:   "ACH_TransactionCode",
 			Value:   payment.ACH_TransactionCode,
@@ -266,7 +191,7 @@ func (v *Validator) ValidateACHPayment(payment *ACHPayment) error {
 			Field:   "TIN",
 			Value:   payment.TIN,
 			Rule:    "tin_format",
-			Message: "TIN must be 9 numeric digits",
+			Message: fmt.Sprintf("TIN must be %d numeric digits", TINLength),
 		}
 	}
 
@@ -295,7 +220,7 @@ func (v *Validator) ValidateACHPayment(payment *ACHPayment) error {
 				Message: "city name is required for IAT payments",
 			}
 		}
-		if strings.TrimSpace(payment.CountryCodeText) == "" || payment.CountryCodeText == "00" {
+		if strings.TrimSpace(payment.CountryCodeText) == "" || payment.CountryCodeText == CountryCodeEmpty {
 			return ValidationError{
 				Field:   "CountryCodeText",
 				Rule:    "required_for_iat",
@@ -340,7 +265,7 @@ func (v *Validator) ValidateCheckPayment(payment *CheckPayment) error {
 			Field:   "TIN",
 			Value:   payment.TIN,
 			Rule:    "tin_format",
-			Message: "TIN must be 9 numeric digits",
+			Message: fmt.Sprintf("TIN must be %d numeric digits", TINLength),
 		}
 	}
 
@@ -358,7 +283,7 @@ func (v *Validator) ValidateCheckPayment(payment *CheckPayment) error {
 
 // Same Day ACH Validations
 func (v *Validator) ValidateSameDayACH(file *File) error {
-	if file.Header.IsRequestedForSameDayACH != "1" {
+	if file.Header.IsRequestedForSameDayACH != SDAFlagEnabled {
 		return nil // Not a Same Day ACH file
 	}
 
@@ -373,7 +298,7 @@ func (v *Validator) ValidateSameDayACH(file *File) error {
 	}
 
 	// Rule: Individual payments must be <= $1,000,000
-	maxSDAAmount := int64(100000000) // $1,000,000 in cents
+	maxSDAAmount := int64(MaxSDAAmountCents)
 	for _, schedule := range file.Schedules {
 		if achSchedule, ok := schedule.(*ACHSchedule); ok {
 			for _, payment := range achSchedule.Payments {
@@ -408,134 +333,13 @@ func (v *Validator) ValidateSameDayACH(file *File) error {
 	return nil
 }
 
-// Balancing Validations
-func (v *Validator) ValidateBalancing(file *File) error {
-	// Calculate actual totals
-	totalRecords := int64(2) // Header + Trailer
-	totalPayments := int64(0)
-	totalAmount := int64(0)
-
-	for _, schedule := range file.Schedules {
-		scheduleRecords := int64(2) // Schedule header + trailer
-		schedulePayments := int64(0)
-		scheduleAmount := int64(0)
-
-		switch s := schedule.(type) {
-		case *ACHSchedule:
-			for _, payment := range s.Payments {
-				scheduleRecords++ // Payment record
-				schedulePayments++
-				if achPayment, ok := payment.(*ACHPayment); ok {
-					scheduleAmount += achPayment.Amount
-
-					// Count associated records
-					scheduleRecords += int64(len(achPayment.Addenda))
-					scheduleRecords += int64(len(achPayment.CARSTASBETC))
-					if achPayment.DNP != nil {
-						scheduleRecords++
-					}
-				}
-			}
-
-			// Validate schedule trailer
-			if s.Trailer != nil {
-				if s.Trailer.ScheduleCount != schedulePayments {
-					return ValidationError{
-						Field:   "ScheduleTrailer.ScheduleCount",
-						Value:   fmt.Sprintf("%d", s.Trailer.ScheduleCount),
-						Rule:    "balance",
-						Message: fmt.Sprintf("expected %d payments, got %d", schedulePayments, s.Trailer.ScheduleCount),
-					}
-				}
-				if s.Trailer.ScheduleAmount != scheduleAmount {
-					return ValidationError{
-						Field:   "ScheduleTrailer.ScheduleAmount",
-						Value:   fmt.Sprintf("%d", s.Trailer.ScheduleAmount),
-						Rule:    "balance",
-						Message: fmt.Sprintf("expected amount %d, got %d", scheduleAmount, s.Trailer.ScheduleAmount),
-					}
-				}
-			}
-		case *CheckSchedule:
-			// Similar logic for check schedules
-			for _, payment := range s.Payments {
-				scheduleRecords++ // Payment record
-				schedulePayments++
-				if checkPayment, ok := payment.(*CheckPayment); ok {
-					scheduleAmount += checkPayment.Amount
-
-					// Count associated records
-					if checkPayment.Stub != nil {
-						scheduleRecords++
-					}
-					scheduleRecords += int64(len(checkPayment.CARSTASBETC))
-					if checkPayment.DNP != nil {
-						scheduleRecords++
-					}
-				}
-			}
-
-			// Validate schedule trailer
-			if s.Trailer != nil {
-				if s.Trailer.ScheduleCount != schedulePayments {
-					return ValidationError{
-						Field:   "ScheduleTrailer.ScheduleCount",
-						Value:   fmt.Sprintf("%d", s.Trailer.ScheduleCount),
-						Rule:    "balance",
-						Message: fmt.Sprintf("expected %d payments, got %d", schedulePayments, s.Trailer.ScheduleCount),
-					}
-				}
-				if s.Trailer.ScheduleAmount != scheduleAmount {
-					return ValidationError{
-						Field:   "ScheduleTrailer.ScheduleAmount",
-						Value:   fmt.Sprintf("%d", s.Trailer.ScheduleAmount),
-						Rule:    "balance",
-						Message: fmt.Sprintf("expected amount %d, got %d", scheduleAmount, s.Trailer.ScheduleAmount),
-					}
-				}
-			}
-		}
-
-		totalRecords += scheduleRecords
-		totalPayments += schedulePayments
-		totalAmount += scheduleAmount
-	}
-
-	// Validate file trailer
-	if file.Trailer.TotalCountRecords != totalRecords {
-		return ValidationError{
-			Field:   "FileTrailer.TotalCountRecords",
-			Value:   fmt.Sprintf("%d", file.Trailer.TotalCountRecords),
-			Rule:    "balance",
-			Message: fmt.Sprintf("expected %d records, got %d", totalRecords, file.Trailer.TotalCountRecords),
-		}
-	}
-
-	if file.Trailer.TotalCountPayments != totalPayments {
-		return ValidationError{
-			Field:   "FileTrailer.TotalCountPayments",
-			Value:   fmt.Sprintf("%d", file.Trailer.TotalCountPayments),
-			Rule:    "balance",
-			Message: fmt.Sprintf("expected %d payments, got %d", totalPayments, file.Trailer.TotalCountPayments),
-		}
-	}
-
-	if file.Trailer.TotalAmountPayments != totalAmount {
-		return ValidationError{
-			Field:   "FileTrailer.TotalAmountPayments",
-			Value:   fmt.Sprintf("%d", file.Trailer.TotalAmountPayments),
-			Rule:    "balance",
-			Message: fmt.Sprintf("expected amount %d, got %d", totalAmount, file.Trailer.TotalAmountPayments),
-		}
-	}
-
-	return nil
-}
+// Balancing Validations - moved to validator_balance.go for better organization
+// This function is now implemented in smaller, focused functions
 
 // Helper functions
 func (v *Validator) validateRoutingNumber(rtn string) error {
-	if len(rtn) != 9 {
-		return fmt.Errorf("routing number must be 9 digits")
+	if len(rtn) != RoutingNumberLength {
+		return fmt.Errorf("routing number must be %d digits", RoutingNumberLength)
 	}
 
 	// Check if all digits
@@ -564,7 +368,7 @@ func (v *Validator) validateRoutingNumber(rtn string) error {
 		digit, _ := strconv.Atoi(string(rtn[i]))
 		sum += digit * weights[i]
 	}
-	if sum%10 != 0 {
+	if sum%RoutingNumberModulus != 0 {
 		return fmt.Errorf("invalid routing number check digit")
 	}
 
@@ -572,7 +376,7 @@ func (v *Validator) validateRoutingNumber(rtn string) error {
 }
 
 func (v *Validator) isValidTIN(tin string) bool {
-	if len(tin) != 9 {
+	if len(tin) != TINLength {
 		return false
 	}
 	_, err := strconv.Atoi(tin)
@@ -612,8 +416,8 @@ func (v *Validator) ValidateCTXAddendum(payment *ACHPayment) error {
 	}
 
 	// First addendum must start with ISA
-	if len(payment.Addenda) > 0 && len(payment.Addenda[0].AddendaInformation) >= 3 {
-		if payment.Addenda[0].AddendaInformation[:3] != "ISA" {
+	if len(payment.Addenda) > 0 && len(payment.Addenda[0].AddendaInformation) >= CTXEDISegmentLength {
+		if payment.Addenda[0].AddendaInformation[:CTXEDISegmentLength] != CTXEDISegmentIdentifier {
 			return ValidationError{
 				Field:   "Addenda[0]",
 				Rule:    "ctx_isa_required",
@@ -624,12 +428,12 @@ func (v *Validator) ValidateCTXAddendum(payment *ACHPayment) error {
 
 	// Validate EDI structure
 	for _, addendum := range payment.Addenda {
-		if addendum.RecordCode != "04" {
+		if addendum.RecordCode != string(RecordTypeACHAddendumCTX) {
 			return ValidationError{
 				Field:   "Addenda.RecordCode",
 				Value:   addendum.RecordCode,
 				Rule:    "ctx_record_code",
-				Message: "CTX addenda must use record code '04'",
+				Message: fmt.Sprintf("CTX addenda must use record code '%s'", RecordTypeACHAddendumCTX),
 			}
 		}
 	}
@@ -658,19 +462,19 @@ func (v *Validator) validateIRSPayment(payment Payment) error {
 	// IRS-specific reconcilement field validation
 	switch p := payment.(type) {
 	case *ACHPayment:
-		if len(p.Reconcilement) != 100 {
+		if len(p.Reconcilement) != ReconcilementLength {
 			return ValidationError{
 				Field:   "Reconcilement",
 				Rule:    "irs_format",
-				Message: "IRS reconcilement must be 100 characters",
+				Message: fmt.Sprintf("IRS reconcilement must be %d characters", ReconcilementLength),
 			}
 		}
 	case *CheckPayment:
-		if len(p.Reconcilement) != 100 {
+		if len(p.Reconcilement) != ReconcilementLength {
 			return ValidationError{
 				Field:   "Reconcilement",
 				Rule:    "irs_format",
-				Message: "IRS reconcilement must be 100 characters",
+				Message: fmt.Sprintf("IRS reconcilement must be %d characters", ReconcilementLength),
 			}
 		}
 	}
@@ -681,11 +485,11 @@ func (v *Validator) validateVAPayment(payment Payment) error {
 	recon := payment.GetReconcilement()
 
 	// Validate reconcilement field length
-	if len(recon) != 100 {
+	if len(recon) != ReconcilementLength {
 		return ValidationError{
 			Field:   "Reconcilement",
 			Rule:    "va_recon_length",
-			Message: "VA reconcilement must be 100 characters",
+			Message: fmt.Sprintf("VA reconcilement must be %d characters", ReconcilementLength),
 		}
 	}
 
@@ -786,11 +590,11 @@ func (v *Validator) validateSSAPayment(payment Payment) error {
 	recon := payment.GetReconcilement()
 
 	// Validate reconcilement field length
-	if len(recon) != 100 {
+	if len(recon) != ReconcilementLength {
 		return ValidationError{
 			Field:   "Reconcilement",
 			Rule:    "ssa_recon_length",
-			Message: "SSA reconcilement must be 100 characters",
+			Message: fmt.Sprintf("SSA reconcilement must be %d characters", ReconcilementLength),
 		}
 	}
 
@@ -860,7 +664,7 @@ func (v *Validator) validateSSAPayment(payment Payment) error {
 func (v *Validator) validateRRBPayment(payment Payment) error {
 	// RRB-specific reconcilement field validation
 	recon := payment.GetReconcilement()
-	if len(recon) != 100 {
+	if len(recon) != ReconcilementLength {
 		return NewFieldLengthError("Reconcilement", recon, 100, len(recon))
 	}
 
@@ -912,11 +716,11 @@ func (v *Validator) validateRRBPayment(payment Payment) error {
 func (v *Validator) validateCCCPayment(payment Payment) error {
 	// CCC-specific reconcilement field validation
 	recon := payment.GetReconcilement()
-	if len(recon) != 100 {
+	if len(recon) != ReconcilementLength {
 		return ValidationError{
 			Field:   "Reconcilement",
 			Rule:    "ccc_format",
-			Message: fmt.Sprintf("CCC reconcilement field must be exactly 100 characters, got %d", len(recon)),
+			Message: fmt.Sprintf("CCC reconcilement field must be exactly %d characters, got %d", ReconcilementLength, len(recon)),
 		}
 	}
 
@@ -987,7 +791,7 @@ func (v *Validator) validateCCCPayment(payment Payment) error {
 // Hexadecimal character validation
 func (v *Validator) ValidateHexCharacters(data string) error {
 	for i, r := range data {
-		if r < 0x40 { // Invalid hex characters are 0x00-0x3F
+		if r < MinHexCharacter { // Invalid hex characters are below 0x40
 			return ValidationError{
 				Field:   "data",
 				Rule:    "hex_validation",

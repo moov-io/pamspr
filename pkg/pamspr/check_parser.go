@@ -109,10 +109,10 @@ func (p *CheckParser) ParseCheckStub(line string) (*CheckStub, error) {
 		PaymentID:  extractField(line, fields["PaymentID"]),
 	}
 
-	// Parse 14 payment identification lines
-	lineFields := []string{
-		"Line1", "Line2", "Line3", "Line4", "Line5", "Line6", "Line7",
-		"Line8", "Line9", "Line10", "Line11", "Line12", "Line13", "Line14",
+	// Parse payment identification lines
+	lineFields := make([]string, MaxPaymentIdentificationLines)
+	for i := 0; i < MaxPaymentIdentificationLines; i++ {
+		lineFields[i] = fmt.Sprintf("Line%d", i+1)
 	}
 
 	for i, lineField := range lineFields {

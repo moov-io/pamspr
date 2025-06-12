@@ -69,14 +69,21 @@ func (p *FileParser) ParseFileTrailer(line string) (*FileTrailer, error) {
 
 // Helper functions
 func extractField(line string, field FieldDefinition) string {
-	if field.Start > len(line) || field.End > len(line) {
+	value, err := SecureExtractField(line, field, "field", DefaultSecurityConfig())
+	if err != nil {
+		// TODO: Add proper error handling/logging
 		return ""
 	}
-	return line[field.Start-1 : field.End]
+	return value
 }
 
 func extractFieldTrimmed(line string, field FieldDefinition) string {
-	return strings.TrimSpace(extractField(line, field))
+	value, err := SecureExtractFieldTrimmed(line, field, "field", DefaultSecurityConfig())
+	if err != nil {
+		// TODO: Add proper error handling/logging
+		return ""
+	}
+	return value
 }
 
 func parseAmount(s string) int64 {
