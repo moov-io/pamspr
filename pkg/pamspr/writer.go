@@ -1,439 +1,656 @@
 package pamspr
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"strings"
 )
 
-// Writer writes PAM SPR files
-type Writer struct {
-	w         io.Writer
-	validator *Validator
-	formatter *FieldFormatter
-	errors    []error
+// WriterConfig configures writer behavior
+type WriterConfig struct {
+	// BufferSize sets the output buffer size (default: 64KB)
+	BufferSize int
+
+	// EnableValidation enables validation during writing (default: true)
+	EnableValidation bool
+
+	// FlushInterval controls how often to flush buffer (default: every 100 records)
+	FlushInterval int
+
+	// ChecksumValidation enables checksum calculation during writing
+	ChecksumValidation bool
 }
 
-// NewWriter creates a new PAM SPR writer
+// DefaultWriterConfig returns sensible defaults
+func DefaultWriterConfig() *WriterConfig {
+	return &WriterConfig{
+		BufferSize:         64 * 1024, // 64KB buffer
+		EnableValidation:   true,
+		FlushInterval:      100,
+		ChecksumValidation: false,
+	}
+}
+
+// Writer writes PAM SPR files in a memory-efficient streaming fashion
+type Writer struct {
+	writer    io.Writer
+	buffer    *bufio.Writer
+	validator *Validator
+	config    *WriterConfig
+
+	// State tracking
+	recordCount   int64
+	paymentCount  int64
+	scheduleCount int64
+	totalAmount   int64
+	errors        []error
+	isFinalized   bool
+
+	// Memory-efficient formatting buffer
+	lineBuffer strings.Builder
+}
+
+// NewWriter creates a new PAM SPR writer with streaming capability
+// This provides memory-efficient writing for large files
 func NewWriter(w io.Writer) *Writer {
-	validator := NewValidator()
-	return &Writer{
-		w:         w,
-		validator: validator,
-		formatter: NewFieldFormatter(validator),
+	return NewWriterWithConfig(w, DefaultWriterConfig())
+}
+
+// NewWriterWithConfig creates a writer with custom configuration
+func NewWriterWithConfig(w io.Writer, config *WriterConfig) *Writer {
+
+	var buffer *bufio.Writer
+	if config.BufferSize > 0 {
+		buffer = bufio.NewWriterSize(w, config.BufferSize)
+	} else {
+		buffer = bufio.NewWriter(w)
+	}
+
+	writer := &Writer{
+		writer:    w,
+		buffer:    buffer,
+		validator: NewValidator(),
+		config:    config,
 		errors:    make([]error, 0),
 	}
+
+	// Pre-allocate line buffer to avoid reallocations
+	writer.lineBuffer.Grow(RecordLength + 10)
+
+	return writer
 }
 
-// Write writes a complete PAM SPR file
-func (w *Writer) Write(file *File) error {
-	// Clear any previous errors
-	w.errors = w.errors[:0]
-
-	// Validate file structure before writing
-	if err := w.validator.ValidateFileStructure(file); err != nil {
-		return fmt.Errorf("file validation: %w", err)
+// WriteFileHeader writes the file header record
+func (w *Writer) WriteFileHeader(header *FileHeader) error {
+	if w.recordCount > 0 {
+		return fmt.Errorf("file header must be written first")
 	}
 
-	// Write file header
-	if err := w.writeFileHeader(file.Header); err != nil {
-		return fmt.Errorf("writing file header: %w", err)
-	}
-
-	// Write schedules
-	for i, schedule := range file.Schedules {
-		if err := w.writeSchedule(schedule); err != nil {
-			return fmt.Errorf("writing schedule %d: %w", i, err)
+	if w.config.EnableValidation {
+		if err := w.validator.ValidateFileHeader(header); err != nil {
+			return fmt.Errorf("validating file header: %w", err)
 		}
 	}
 
-	// Write file trailer
-	if err := w.writeFileTrailer(file.Trailer); err != nil {
-		return fmt.Errorf("writing file trailer: %w", err)
+	line, err := w.formatFileHeader(header)
+	if err != nil {
+		return fmt.Errorf("formatting file header: %w", err)
 	}
 
-	// Check for accumulated formatting errors
-	if len(w.errors) > 0 {
-		// Return the first error (they're all likely similar truncation issues)
-		return fmt.Errorf("field formatting errors occurred: %w", w.errors[0])
+	return w.writeLine(line)
+}
+
+// WriteScheduleHeader writes a schedule header record
+func (w *Writer) WriteScheduleHeader(schedule Schedule) error {
+	if w.recordCount == 0 {
+		return fmt.Errorf("file header must be written before schedule header")
+	}
+
+	var line string
+	var err error
+
+	switch s := schedule.(type) {
+	case *ACHSchedule:
+		line, err = w.formatACHScheduleHeader(s.Header)
+	case *CheckSchedule:
+		line, err = w.formatCheckScheduleHeader(s.Header)
+	default:
+		return fmt.Errorf("unknown schedule type")
+	}
+
+	if err != nil {
+		return fmt.Errorf("formatting schedule header: %w", err)
+	}
+
+	w.scheduleCount++
+	return w.writeLine(line)
+}
+
+// WritePayment writes a payment record (and optionally associated records)
+func (w *Writer) WritePayment(payment Payment) error {
+	var line string
+	var err error
+
+	switch p := payment.(type) {
+	case *ACHPayment:
+		line, err = w.formatACHPayment(p)
+		if err != nil {
+			return fmt.Errorf("formatting ACH payment: %w", err)
+		}
+
+		// Write main payment record
+		if err := w.writeLine(line); err != nil {
+			return err
+		}
+
+		// Write associated records
+		for _, addendum := range p.Addenda {
+			addendumLine, err := w.formatACHAddendum(addendum)
+			if err != nil {
+				return fmt.Errorf("formatting ACH addendum: %w", err)
+			}
+			if err := w.writeLine(addendumLine); err != nil {
+				return err
+			}
+		}
+
+		for _, cars := range p.CARSTASBETC {
+			carsLine, err := w.formatCARSTASBETC(cars)
+			if err != nil {
+				return fmt.Errorf("formatting CARS record: %w", err)
+			}
+			if err := w.writeLine(carsLine); err != nil {
+				return err
+			}
+		}
+
+		if p.DNP != nil {
+			dnpLine, err := w.formatDNP(p.DNP)
+			if err != nil {
+				return fmt.Errorf("formatting DNP record: %w", err)
+			}
+			if err := w.writeLine(dnpLine); err != nil {
+				return err
+			}
+		}
+
+		w.totalAmount += p.Amount
+
+	case *CheckPayment:
+		line, err = w.formatCheckPayment(p)
+		if err != nil {
+			return fmt.Errorf("formatting check payment: %w", err)
+		}
+
+		// Write main payment record
+		if err := w.writeLine(line); err != nil {
+			return err
+		}
+
+		// Write associated records
+		if p.Stub != nil {
+			stubLine, err := w.formatCheckStub(p.Stub)
+			if err != nil {
+				return fmt.Errorf("formatting check stub: %w", err)
+			}
+			if err := w.writeLine(stubLine); err != nil {
+				return err
+			}
+		}
+
+		for _, cars := range p.CARSTASBETC {
+			carsLine, err := w.formatCARSTASBETC(cars)
+			if err != nil {
+				return fmt.Errorf("formatting CARS record: %w", err)
+			}
+			if err := w.writeLine(carsLine); err != nil {
+				return err
+			}
+		}
+
+		if p.DNP != nil {
+			dnpLine, err := w.formatDNP(p.DNP)
+			if err != nil {
+				return fmt.Errorf("formatting DNP record: %w", err)
+			}
+			if err := w.writeLine(dnpLine); err != nil {
+				return err
+			}
+		}
+
+		w.totalAmount += p.Amount
+
+	default:
+		return fmt.Errorf("unknown payment type")
+	}
+
+	w.paymentCount++
+
+	// Periodic flush to control memory usage
+	if w.config.FlushInterval > 0 && w.recordCount%int64(w.config.FlushInterval) == 0 {
+		if err := w.buffer.Flush(); err != nil {
+			return fmt.Errorf("flushing buffer: %w", err)
+		}
 	}
 
 	return nil
 }
 
-// writeFileHeader writes the file header record
-func (w *Writer) writeFileHeader(header *FileHeader) error {
-	line := w.formatField(header.RecordCode, 2) +
-		w.formatField(header.InputSystem, 40) +
-		w.formatField(header.StandardPaymentVersion, 3) +
-		w.formatField(header.IsRequestedForSameDayACH, 1) +
-		w.formatField("", 804) // Filler
+// WriteScheduleTrailer writes a schedule trailer record
+func (w *Writer) WriteScheduleTrailer(trailer *ScheduleTrailer) error {
+	line, err := w.formatScheduleTrailer(trailer)
+	if err != nil {
+		return fmt.Errorf("formatting schedule trailer: %w", err)
+	}
 
 	return w.writeLine(line)
 }
 
-// writeSchedule writes a complete schedule
-func (w *Writer) writeSchedule(schedule Schedule) error {
-	switch s := schedule.(type) {
-	case *ACHSchedule:
-		return w.writeACHSchedule(s)
-	case *CheckSchedule:
-		return w.writeCheckSchedule(s)
-	default:
-		return fmt.Errorf("unknown schedule type")
-	}
-}
-
-// writeACHSchedule writes an ACH schedule
-func (w *Writer) writeACHSchedule(schedule *ACHSchedule) error {
-	// Write schedule header
-	if err := w.writeACHScheduleHeader(schedule.Header); err != nil {
-		return err
+// WriteFileTrailer writes the file trailer record and finalizes the file
+func (w *Writer) WriteFileTrailer(trailer *FileTrailer) error {
+	if w.isFinalized {
+		return fmt.Errorf("file already finalized")
 	}
 
-	// Write payments
-	for _, payment := range schedule.Payments {
-		if achPayment, ok := payment.(*ACHPayment); ok {
-			// Write payment record
-			if err := w.writeACHPayment(achPayment); err != nil {
-				return err
-			}
+	// Update trailer with actual counts if not provided
+	if trailer.TotalCountRecords == 0 {
+		trailer.TotalCountRecords = w.recordCount + 1 // +1 for the trailer itself
+	}
+	if trailer.TotalCountPayments == 0 {
+		trailer.TotalCountPayments = w.paymentCount
+	}
+	if trailer.TotalAmountPayments == 0 {
+		trailer.TotalAmountPayments = w.totalAmount
+	}
 
-			// Write associated records
-			for _, addendum := range achPayment.Addenda {
-				if err := w.writeACHAddendum(addendum); err != nil {
-					return err
-				}
-			}
-
-			for _, cars := range achPayment.CARSTASBETC {
-				if err := w.writeCARSTASBETC(cars); err != nil {
-					return err
-				}
-			}
-
-			if achPayment.DNP != nil {
-				if err := w.writeDNP(achPayment.DNP); err != nil {
-					return err
-				}
-			}
+	if w.config.EnableValidation {
+		// Validate trailer totals match what we've written
+		if trailer.TotalCountPayments != w.paymentCount {
+			return fmt.Errorf("trailer payment count %d doesn't match written payments %d",
+				trailer.TotalCountPayments, w.paymentCount)
+		}
+		if trailer.TotalAmountPayments != w.totalAmount {
+			return fmt.Errorf("trailer amount %d doesn't match written amount %d",
+				trailer.TotalAmountPayments, w.totalAmount)
 		}
 	}
 
-	// Write schedule trailer
-	return w.writeScheduleTrailer(schedule.Trailer)
-}
+	line, err := w.formatFileTrailer(trailer)
+	if err != nil {
+		return fmt.Errorf("formatting file trailer: %w", err)
+	}
 
-// writeACHScheduleHeader writes an ACH schedule header record
-func (w *Writer) writeACHScheduleHeader(header *ACHScheduleHeader) error {
-	line := w.formatField(header.RecordCode, 2) +
-		w.formatField(header.AgencyACHText, 4) +
-		w.formatFieldRightJustified(header.ScheduleNumber, 14, '0') +
-		w.formatField(header.PaymentTypeCode, 25) +
-		w.formatField(header.StandardEntryClassCode, 3) +
-		w.formatNumeric(header.AgencyLocationCode, 8) +
-		w.formatField("", 1) + // Filler
-		w.formatField(header.FederalEmployerIDNumber, 10) +
-		w.formatField("", 783) // Filler
-
-	return w.writeLine(line)
-}
-
-// writeACHPayment writes an ACH payment data record
-func (w *Writer) writeACHPayment(payment *ACHPayment) error {
-	line := w.formatField(payment.RecordCode, 2) +
-		w.formatField(payment.AgencyAccountIdentifier, 16) +
-		w.formatAmount(payment.Amount, 10) +
-		w.formatField(payment.AgencyPaymentTypeCode, 1) +
-		w.formatField(payment.IsTOP_Offset, 1) +
-		w.formatField(payment.PayeeName, 35) +
-		w.formatField(payment.PayeeAddressLine1, 35) +
-		w.formatField(payment.PayeeAddressLine2, 35) +
-		w.formatField(payment.CityName, 27) +
-		w.formatField(payment.StateName, 10) +
-		w.formatField(payment.StateCodeText, 2) +
-		w.formatField(payment.PostalCode, 5) +
-		w.formatField(payment.PostalCodeExtension, 5) +
-		w.formatField(payment.CountryCodeText, 2) +
-		w.formatField(payment.RoutingNumber, 9) +
-		w.formatField(payment.AccountNumber, 17) +
-		w.formatField(payment.ACH_TransactionCode, 2) +
-		w.formatField(payment.PayeeIdentifierAdditional, 9) +
-		w.formatField(payment.PayeeNameAdditional, 35) +
-		w.formatField(payment.PaymentID, 20) +
-		w.formatFieldNoJustify(payment.Reconcilement, 100) + // Don't justify reconcilement
-		w.formatField(payment.TIN, 9) +
-		w.formatField(payment.PaymentRecipientTINIndicator, 1) +
-		w.formatField(payment.AdditionalPayeeTINIndicator, 1) +
-		w.formatField(payment.AmountEligibleForOffset, 10) +
-		w.formatField(payment.PayeeAddressLine3, 35) +
-		w.formatField(payment.PayeeAddressLine4, 35) +
-		w.formatField(payment.CountryName, 40) +
-		w.formatField(payment.ConsularCode, 3) +
-		w.formatField(payment.SubPaymentTypeCode, 32) +
-		w.formatField(payment.PayerMechanism, 20) +
-		w.formatField(payment.PaymentDescriptionCode, 2) +
-		w.formatField("", 284) // Filler
-
-	return w.writeLine(line)
-}
-
-// writeCheckSchedule writes a check schedule
-func (w *Writer) writeCheckSchedule(schedule *CheckSchedule) error {
-	// Write schedule header
-	if err := w.writeCheckScheduleHeader(schedule.Header); err != nil {
+	if err := w.writeLine(line); err != nil {
 		return err
 	}
 
-	// Write payments
-	for _, payment := range schedule.Payments {
-		if checkPayment, ok := payment.(*CheckPayment); ok {
-			// Write payment record
-			if err := w.writeCheckPayment(checkPayment); err != nil {
-				return err
-			}
-
-			// Write associated records
-			if checkPayment.Stub != nil {
-				if err := w.writeCheckStub(checkPayment.Stub); err != nil {
-					return err
-				}
-			}
-
-			for _, cars := range checkPayment.CARSTASBETC {
-				if err := w.writeCARSTASBETC(cars); err != nil {
-					return err
-				}
-			}
-
-			if checkPayment.DNP != nil {
-				if err := w.writeDNP(checkPayment.DNP); err != nil {
-					return err
-				}
-			}
-		}
+	// Final flush
+	if err := w.buffer.Flush(); err != nil {
+		return fmt.Errorf("final flush: %w", err)
 	}
 
-	// Write schedule trailer
-	return w.writeScheduleTrailer(schedule.Trailer)
+	w.isFinalized = true
+	return nil
 }
 
-// writeCheckScheduleHeader writes a check schedule header record
-func (w *Writer) writeCheckScheduleHeader(header *CheckScheduleHeader) error {
-	line := w.formatField(header.RecordCode, 2) +
-		w.formatFieldRightJustified(header.ScheduleNumber, 14, '0') +
-		w.formatField(header.PaymentTypeCode, 25) +
-		w.formatNumeric(header.AgencyLocationCode, 8) +
-		w.formatField("", 9) + // Filler
-		w.formatField(header.CheckPaymentEnclosureCode, 10) +
-		w.formatField("", 782) // Filler
-
-	return w.writeLine(line)
+// Flush forces a buffer flush
+func (w *Writer) Flush() error {
+	return w.buffer.Flush()
 }
 
-// writeCheckPayment writes a check payment data record
-func (w *Writer) writeCheckPayment(payment *CheckPayment) error {
-	line := w.formatField(payment.RecordCode, 2) +
-		w.formatField(payment.AgencyAccountIdentifier, 16) +
-		w.formatAmount(payment.Amount, 10) +
-		w.formatField(payment.AgencyPaymentTypeCode, 1) +
-		w.formatField(payment.IsTOP_Offset, 1) +
-		w.formatField(payment.PayeeName, 35) +
-		w.formatField(payment.PayeeAddressLine1, 35) +
-		w.formatField(payment.PayeeAddressLine2, 35) +
-		w.formatField(payment.PayeeAddressLine3, 35) +
-		w.formatField(payment.PayeeAddressLine4, 35) +
-		w.formatField(payment.CityName, 27) +
-		w.formatField(payment.StateName, 10) +
-		w.formatField(payment.StateCodeText, 2) +
-		w.formatField(payment.PostalCode, 5) +
-		w.formatField(payment.PostalCodeExtension, 5) +
-		w.formatField(payment.PostNetBarcodeDeliveryPoint, 3) +
-		w.formatField("", 14) + // Filler
-		w.formatField(payment.CountryName, 40) +
-		w.formatField(payment.ConsularCode, 3) +
-		w.formatField(payment.CheckLegendText1, 55) +
-		w.formatField(payment.CheckLegendText2, 55) +
-		w.formatField(payment.PayeeIdentifier_Secondary, 9) +
-		w.formatField(payment.PartyName_Secondary, 35) +
-		w.formatField(payment.PaymentID, 20) +
-		w.formatFieldNoJustify(payment.Reconcilement, 100) + // Don't justify reconcilement
-		w.formatField(payment.SpecialHandling, 50) +
-		w.formatField(payment.TIN, 9) +
-		w.formatField(payment.USPSIntelligentMailBarcode, 50) +
-		w.formatField(payment.PaymentRecipientTINIndicator, 1) +
-		w.formatField(payment.SecondaryPayeeTINIndicator, 1) +
-		w.formatField(payment.AmountEligibleForOffset, 10) +
-		w.formatField(payment.SubPaymentTypeCode, 32) +
-		w.formatField(payment.PayerMechanism, 20) +
-		w.formatField(payment.PaymentDescriptionCode, 2) +
-		w.formatField("", 87) // Filler
-
-	return w.writeLine(line)
+// GetStats returns current writing statistics
+func (w *Writer) GetStats() (recordCount, paymentCount, scheduleCount int64, totalAmount int64) {
+	return w.recordCount, w.paymentCount, w.scheduleCount, w.totalAmount
 }
 
-// writeACHAddendum writes an ACH addendum record
-func (w *Writer) writeACHAddendum(addendum *ACHAddendum) error {
-	var line string
+// Memory-efficient formatting methods using string builder
+
+func (w *Writer) formatFileHeader(header *FileHeader) (string, error) {
+	w.lineBuffer.Reset()
+	w.lineBuffer.Grow(RecordLength)
+
+	w.appendField(header.RecordCode, 2)
+	w.appendField(header.InputSystem, 40)
+	w.appendField(header.StandardPaymentVersion, 3)
+	w.appendField(header.IsRequestedForSameDayACH, 1)
+	w.appendFiller(804)
+
+	return w.lineBuffer.String(), nil
+}
+
+func (w *Writer) formatACHScheduleHeader(header *ACHScheduleHeader) (string, error) {
+	w.lineBuffer.Reset()
+	w.lineBuffer.Grow(RecordLength)
+
+	w.appendField(header.RecordCode, 2)
+	w.appendField(header.AgencyACHText, 4)
+	w.appendFieldRightJustified(header.ScheduleNumber, 14, '0')
+	w.appendField(header.PaymentTypeCode, 25)
+	w.appendField(header.StandardEntryClassCode, 3)
+	w.appendNumeric(header.AgencyLocationCode, 8)
+	w.appendFiller(1)
+	w.appendField(header.FederalEmployerIDNumber, 10)
+	w.appendFiller(783)
+
+	return w.lineBuffer.String(), nil
+}
+
+func (w *Writer) formatCheckScheduleHeader(header *CheckScheduleHeader) (string, error) {
+	w.lineBuffer.Reset()
+	w.lineBuffer.Grow(RecordLength)
+
+	w.appendField(header.RecordCode, 2)
+	w.appendFieldRightJustified(header.ScheduleNumber, 14, '0')
+	w.appendField(header.PaymentTypeCode, 25)
+	w.appendNumeric(header.AgencyLocationCode, 8)
+	w.appendFiller(9)
+	w.appendField(header.CheckPaymentEnclosureCode, 10)
+	w.appendFiller(782)
+
+	return w.lineBuffer.String(), nil
+}
+
+func (w *Writer) formatACHPayment(payment *ACHPayment) (string, error) {
+	w.lineBuffer.Reset()
+	w.lineBuffer.Grow(RecordLength)
+
+	w.appendField(payment.RecordCode, 2)
+	w.appendField(payment.AgencyAccountIdentifier, 16)
+	w.appendAmount(payment.Amount, 10)
+	w.appendField(payment.AgencyPaymentTypeCode, 1)
+	w.appendField(payment.IsTOP_Offset, 1)
+	w.appendField(payment.PayeeName, 35)
+	w.appendField(payment.PayeeAddressLine1, 35)
+	w.appendField(payment.PayeeAddressLine2, 35)
+	w.appendField(payment.CityName, 27)
+	w.appendField(payment.StateName, 10)
+	w.appendField(payment.StateCodeText, 2)
+	w.appendField(payment.PostalCode, 5)
+	w.appendField(payment.PostalCodeExtension, 5)
+	w.appendField(payment.CountryCodeText, 2)
+	w.appendField(payment.RoutingNumber, 9)
+	w.appendField(payment.AccountNumber, 17)
+	w.appendField(payment.ACH_TransactionCode, 2)
+	w.appendField(payment.PayeeIdentifierAdditional, 9)
+	w.appendField(payment.PayeeNameAdditional, 35)
+	w.appendField(payment.PaymentID, 20)
+	w.appendFieldNoJustify(payment.Reconcilement, 100)
+	w.appendField(payment.TIN, 9)
+	w.appendField(payment.PaymentRecipientTINIndicator, 1)
+	w.appendField(payment.AdditionalPayeeTINIndicator, 1)
+	w.appendField(payment.AmountEligibleForOffset, 10)
+	w.appendField(payment.PayeeAddressLine3, 35)
+	w.appendField(payment.PayeeAddressLine4, 35)
+	w.appendField(payment.CountryName, 40)
+	w.appendField(payment.ConsularCode, 3)
+	w.appendField(payment.SubPaymentTypeCode, 32)
+	w.appendField(payment.PayerMechanism, 20)
+	w.appendField(payment.PaymentDescriptionCode, 2)
+	w.appendFiller(284)
+
+	return w.lineBuffer.String(), nil
+}
+
+func (w *Writer) formatCheckPayment(payment *CheckPayment) (string, error) {
+	w.lineBuffer.Reset()
+	w.lineBuffer.Grow(RecordLength)
+
+	w.appendField(payment.RecordCode, 2)
+	w.appendField(payment.AgencyAccountIdentifier, 16)
+	w.appendAmount(payment.Amount, 10)
+	w.appendField(payment.AgencyPaymentTypeCode, 1)
+	w.appendField(payment.IsTOP_Offset, 1)
+	w.appendField(payment.PayeeName, 35)
+	w.appendField(payment.PayeeAddressLine1, 35)
+	w.appendField(payment.PayeeAddressLine2, 35)
+	w.appendField(payment.PayeeAddressLine3, 35)
+	w.appendField(payment.PayeeAddressLine4, 35)
+	w.appendField(payment.CityName, 27)
+	w.appendField(payment.StateName, 10)
+	w.appendField(payment.StateCodeText, 2)
+	w.appendField(payment.PostalCode, 5)
+	w.appendField(payment.PostalCodeExtension, 5)
+	w.appendField(payment.PostNetBarcodeDeliveryPoint, 3)
+	w.appendFiller(14)
+	w.appendField(payment.CountryName, 40)
+	w.appendField(payment.ConsularCode, 3)
+	w.appendField(payment.CheckLegendText1, 55)
+	w.appendField(payment.CheckLegendText2, 55)
+	w.appendField(payment.PayeeIdentifier_Secondary, 9)
+	w.appendField(payment.PartyName_Secondary, 35)
+	w.appendField(payment.PaymentID, 20)
+	w.appendFieldNoJustify(payment.Reconcilement, 100)
+	w.appendField(payment.SpecialHandling, 50)
+	w.appendField(payment.TIN, 9)
+	w.appendField(payment.USPSIntelligentMailBarcode, 50)
+	w.appendField(payment.PaymentRecipientTINIndicator, 1)
+	w.appendField(payment.SecondaryPayeeTINIndicator, 1)
+	w.appendField(payment.AmountEligibleForOffset, 10)
+	w.appendField(payment.SubPaymentTypeCode, 32)
+	w.appendField(payment.PayerMechanism, 20)
+	w.appendField(payment.PaymentDescriptionCode, 2)
+	w.appendFiller(87)
+
+	return w.lineBuffer.String(), nil
+}
+
+func (w *Writer) formatACHAddendum(addendum *ACHAddendum) (string, error) {
+	w.lineBuffer.Reset()
+	w.lineBuffer.Grow(RecordLength)
+
+	w.appendField(addendum.RecordCode, 2)
+	w.appendField(addendum.PaymentID, 20)
 
 	if addendum.RecordCode == "03" {
-		line = w.formatField(addendum.RecordCode, 2) +
-			w.formatField(addendum.PaymentID, 20) +
-			w.formatField(addendum.AddendaInformation, 80) +
-			w.formatField("", 748) // Filler
+		w.appendField(addendum.AddendaInformation, 80)
+		w.appendFiller(748)
 	} else if addendum.RecordCode == "04" { // CTX
-		line = w.formatField(addendum.RecordCode, 2) +
-			w.formatField(addendum.PaymentID, 20) +
-			w.formatField(addendum.AddendaInformation, 800) +
-			w.formatField("", 28) // Filler
+		w.appendField(addendum.AddendaInformation, 800)
+		w.appendFiller(28)
 	} else {
-		return fmt.Errorf("invalid addendum record code: %s", addendum.RecordCode)
+		return "", fmt.Errorf("invalid addendum record code: %s", addendum.RecordCode)
 	}
 
-	return w.writeLine(line)
+	return w.lineBuffer.String(), nil
 }
 
-// writeCARSTASBETC writes a CARS TAS/BETC record
-func (w *Writer) writeCARSTASBETC(cars *CARSTASBETC) error {
-	line := w.formatField(cars.RecordCode, 2) +
-		w.formatField(cars.PaymentID, 20) +
-		w.formatField(cars.SubLevelPrefixCode, 2) +
-		w.formatField(cars.AllocationTransferAgencyID, 3) +
-		w.formatField(cars.AgencyIdentifier, 3) +
-		w.formatField(cars.BeginningPeriodOfAvailability, 4) +
-		w.formatField(cars.EndingPeriodOfAvailability, 4) +
-		w.formatField(cars.AvailabilityTypeCode, 1) +
-		w.formatField(cars.MainAccountCode, 4) +
-		w.formatField(cars.SubAccountCode, 3) +
-		w.formatField(cars.BusinessEventTypeCode, 8) +
-		w.formatAmount(cars.AccountClassificationAmount, 10) +
-		w.formatField(cars.IsCredit, 1) +
-		w.formatField("", 785) // Filler
+func (w *Writer) formatCARSTASBETC(cars *CARSTASBETC) (string, error) {
+	w.lineBuffer.Reset()
+	w.lineBuffer.Grow(RecordLength)
 
-	return w.writeLine(line)
+	w.appendField(cars.RecordCode, 2)
+	w.appendField(cars.PaymentID, 20)
+	w.appendField(cars.SubLevelPrefixCode, 2)
+	w.appendField(cars.AllocationTransferAgencyID, 3)
+	w.appendField(cars.AgencyIdentifier, 3)
+	w.appendField(cars.BeginningPeriodOfAvailability, 4)
+	w.appendField(cars.EndingPeriodOfAvailability, 4)
+	w.appendField(cars.AvailabilityTypeCode, 1)
+	w.appendField(cars.MainAccountCode, 4)
+	w.appendField(cars.SubAccountCode, 3)
+	w.appendField(cars.BusinessEventTypeCode, 8)
+	w.appendAmount(cars.AccountClassificationAmount, 10)
+	w.appendField(cars.IsCredit, 1)
+	w.appendFiller(785)
+
+	return w.lineBuffer.String(), nil
 }
 
-// writeCheckStub writes a check stub record
-func (w *Writer) writeCheckStub(stub *CheckStub) error {
-	line := w.formatField(stub.RecordCode, 2) +
-		w.formatField(stub.PaymentID, 20)
+func (w *Writer) formatCheckStub(stub *CheckStub) (string, error) {
+	w.lineBuffer.Reset()
+	w.lineBuffer.Grow(RecordLength)
+
+	w.appendField(stub.RecordCode, 2)
+	w.appendField(stub.PaymentID, 20)
 
 	for i := 0; i < 14; i++ {
-		line += w.formatField(stub.PaymentIdentificationLines[i], 55)
+		w.appendField(stub.PaymentIdentificationLines[i], 55)
 	}
 
-	line += w.formatField("", 58) // Filler
+	w.appendFiller(58)
 
-	return w.writeLine(line)
+	return w.lineBuffer.String(), nil
 }
 
-// writeDNP writes a DNP record
-func (w *Writer) writeDNP(dnp *DNPRecord) error {
-	line := w.formatField(dnp.RecordCode, 2) +
-		w.formatField(dnp.PaymentID, 20) +
-		w.formatFieldNoJustify(dnp.DNPDetail, 766) + // Don't justify DNP detail
-		w.formatField("", 62) // Filler
+func (w *Writer) formatDNP(dnp *DNPRecord) (string, error) {
+	w.lineBuffer.Reset()
+	w.lineBuffer.Grow(RecordLength)
 
-	return w.writeLine(line)
+	w.appendField(dnp.RecordCode, 2)
+	w.appendField(dnp.PaymentID, 20)
+	w.appendFieldNoJustify(dnp.DNPDetail, 766)
+	w.appendFiller(62)
+
+	return w.lineBuffer.String(), nil
 }
 
-// writeScheduleTrailer writes a schedule trailer record
-func (w *Writer) writeScheduleTrailer(trailer *ScheduleTrailer) error {
-	line := w.formatField(trailer.RecordCode, 2) +
-		w.formatField("", 10) + // Filler
-		w.formatNumeric(fmt.Sprintf("%d", trailer.ScheduleCount), 8) +
-		w.formatField("", 3) + // Filler
-		w.formatAmount(trailer.ScheduleAmount, 15) +
-		w.formatField("", 812) // Filler
+func (w *Writer) formatScheduleTrailer(trailer *ScheduleTrailer) (string, error) {
+	w.lineBuffer.Reset()
+	w.lineBuffer.Grow(RecordLength)
 
-	return w.writeLine(line)
+	w.appendField(trailer.RecordCode, 2)
+	w.appendFiller(10)
+	w.appendNumeric(fmt.Sprintf("%d", trailer.ScheduleCount), 8)
+	w.appendFiller(3)
+	w.appendAmount(trailer.ScheduleAmount, 15)
+	w.appendFiller(812)
+
+	return w.lineBuffer.String(), nil
 }
 
-// writeFileTrailer writes the file trailer record
-func (w *Writer) writeFileTrailer(trailer *FileTrailer) error {
-	line := w.formatField(trailer.RecordCode, 2) +
-		w.formatNumeric(fmt.Sprintf("%d", trailer.TotalCountRecords), 18) +
-		w.formatNumeric(fmt.Sprintf("%d", trailer.TotalCountPayments), 18) +
-		w.formatAmount(trailer.TotalAmountPayments, 18) +
-		w.formatField("", 794) // Filler
+func (w *Writer) formatFileTrailer(trailer *FileTrailer) (string, error) {
+	w.lineBuffer.Reset()
+	w.lineBuffer.Grow(RecordLength)
 
-	return w.writeLine(line)
+	w.appendField(trailer.RecordCode, 2)
+	w.appendNumeric(fmt.Sprintf("%d", trailer.TotalCountRecords), 18)
+	w.appendNumeric(fmt.Sprintf("%d", trailer.TotalCountPayments), 18)
+	w.appendAmount(trailer.TotalAmountPayments, 18)
+	w.appendFiller(794)
+
+	return w.lineBuffer.String(), nil
 }
 
-// Helper methods for field formatting
+// Memory-efficient field formatting helpers using string builder
 
-// formatField formats a field with left justification and blank padding
-func (w *Writer) formatField(value string, length int) string {
-	result, err := SecureFormatField(value, length, "field", DefaultSecurityConfig())
-	if err != nil {
-		// Store error for later handling
-		w.errors = append(w.errors, fmt.Errorf("formatting field of length %d: %w", length, err))
-		// Return truncated value to continue processing
-		if len(value) > length {
-			return value[:length]
-		}
-		return value
+func (w *Writer) appendField(value string, length int) {
+	if len(value) >= length {
+		w.lineBuffer.WriteString(value[:length])
+	} else {
+		w.lineBuffer.WriteString(value)
+		w.appendSpaces(length - len(value))
 	}
-	return result
 }
 
-// formatFieldRightJustified formats a field with right justification
-func (w *Writer) formatFieldRightJustified(value string, length int, padChar rune) string {
+func (w *Writer) appendFieldRightJustified(value string, length int, padChar rune) {
 	value = strings.TrimSpace(value)
-	result, err := SecurePadLeft(value, length, padChar, "field")
-	if err != nil {
-		// Store error for later handling
-		w.errors = append(w.errors, fmt.Errorf("formatting right-justified field of length %d: %w", length, err))
-		// Return truncated value to continue processing
-		if len(value) > length {
-			return value[:length]
+	if len(value) >= length {
+		w.lineBuffer.WriteString(value[:length])
+	} else {
+		padCount := length - len(value)
+		for i := 0; i < padCount; i++ {
+			w.lineBuffer.WriteRune(padChar)
 		}
-		return value
+		w.lineBuffer.WriteString(value)
 	}
-	return result
 }
 
-// formatFieldNoJustify returns the field value as-is, padded to length
-func (w *Writer) formatFieldNoJustify(value string, length int) string {
-	result, err := SecureFormatField(value, length, "field", DefaultSecurityConfig())
-	if err != nil {
-		// Store error for later handling
-		w.errors = append(w.errors, fmt.Errorf("formatting no-justify field of length %d: %w", length, err))
-		// Return truncated value to continue processing
-		if len(value) > length {
-			return value[:length]
+func (w *Writer) appendFieldNoJustify(value string, length int) {
+	w.appendField(value, length) // Same as left-justified
+}
+
+func (w *Writer) appendNumeric(value string, length int) {
+	// Extract only numeric characters
+	numericOnly := strings.Builder{}
+	for _, r := range value {
+		if r >= '0' && r <= '9' {
+			numericOnly.WriteRune(r)
 		}
-		return value
 	}
-	return result
-}
 
-// formatNumeric formats a numeric field with right justification and zero padding
-func (w *Writer) formatNumeric(value string, length int) string {
-	result, err := SecurePadNumeric(value, length, "field")
-	if err != nil {
-		// Store error for later handling
-		w.errors = append(w.errors, fmt.Errorf("formatting numeric field of length %d: %w", length, err))
-		// Return truncated value to continue processing
-		if len(value) > length {
-			return value[:length]
+	numeric := numericOnly.String()
+	if len(numeric) >= length {
+		w.lineBuffer.WriteString(numeric[:length])
+	} else {
+		// Right justify with zeros
+		padCount := length - len(numeric)
+		for i := 0; i < padCount; i++ {
+			w.lineBuffer.WriteByte('0')
 		}
-		return value
+		w.lineBuffer.WriteString(numeric)
 	}
-	return result
 }
 
-// formatAmount formats an amount field (in cents) with right justification and zero padding
-func (w *Writer) formatAmount(cents int64, length int) string {
-	return w.formatNumeric(fmt.Sprintf("%d", cents), length)
+func (w *Writer) appendAmount(cents int64, length int) {
+	// Handle negative amounts
+	amount := cents
+	if amount < 0 {
+		amount = -amount
+	}
+
+	amountStr := fmt.Sprintf("%d", amount)
+	w.appendNumeric(amountStr, length)
 }
 
-// writeLine writes a line to the output
+func (w *Writer) appendFiller(length int) {
+	w.appendSpaces(length)
+}
+
+func (w *Writer) appendSpaces(count int) {
+	for i := 0; i < count; i++ {
+		w.lineBuffer.WriteByte(' ')
+	}
+}
+
 func (w *Writer) writeLine(line string) error {
 	if len(line) != RecordLength {
 		return fmt.Errorf("invalid line length: expected %d, got %d", RecordLength, len(line))
 	}
 
-	_, err := fmt.Fprintln(w.w, line)
-	return err
+	if _, err := w.buffer.WriteString(line); err != nil {
+		return err
+	}
+	if err := w.buffer.WriteByte('\n'); err != nil {
+		return err
+	}
+
+	w.recordCount++
+	return nil
+}
+
+// Write writes a complete PAM SPR file in streaming fashion
+// This method provides compatibility with the traditional Writer.Write() API
+// while using streaming internally for memory efficiency
+func (w *Writer) Write(file *File) error {
+	// Write file header
+	if err := w.WriteFileHeader(file.Header); err != nil {
+		return fmt.Errorf("writing file header: %w", err)
+	}
+
+	// Write schedules
+	for i, schedule := range file.Schedules {
+		if err := w.WriteScheduleHeader(schedule); err != nil {
+			return fmt.Errorf("writing schedule %d header: %w", i, err)
+		}
+
+		// Write payments
+		for _, payment := range schedule.GetPayments() {
+			if err := w.WritePayment(payment); err != nil {
+				return fmt.Errorf("writing payment in schedule %d: %w", i, err)
+			}
+		}
+
+		// Write schedule trailer
+		if err := w.WriteScheduleTrailer(schedule.GetTrailer()); err != nil {
+			return fmt.Errorf("writing schedule %d trailer: %w", i, err)
+		}
+	}
+
+	// Write file trailer
+	if err := w.WriteFileTrailer(file.Trailer); err != nil {
+		return fmt.Errorf("writing file trailer: %w", err)
+	}
+
+	return nil
 }

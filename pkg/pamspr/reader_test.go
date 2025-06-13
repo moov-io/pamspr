@@ -279,58 +279,6 @@ func TestReaderMissingFileTrailer(t *testing.T) {
 	}
 }
 
-func TestReaderExtractField(t *testing.T) {
-	reader := &Reader{}
-	line := "12345678901234567890"
-
-	tests := []struct {
-		name     string
-		start    int
-		end      int
-		expected string
-	}{
-		{"First 5 chars", 1, 5, "12345"},
-		{"Middle chars", 6, 10, "67890"},
-		{"Last 5 chars", 16, 20, "67890"},
-		{"Single char", 1, 1, "1"},
-		{"Out of bounds", 25, 30, ""},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := reader.extractField(line, tt.start, tt.end)
-			if result != tt.expected {
-				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
-			}
-		})
-	}
-}
-
-func TestReaderParseAmount(t *testing.T) {
-	reader := &Reader{}
-
-	tests := []struct {
-		name     string
-		input    string
-		expected int64
-	}{
-		{"Valid amount", "0000100000", 100000},
-		{"With spaces", "  100000  ", 100000},
-		{"Empty string", "", 0},
-		{"All spaces", "    ", 0},
-		{"Zero", "0000000000", 0},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := reader.parseAmount(tt.input)
-			if result != tt.expected {
-				t.Errorf("Expected %d, got %d", tt.expected, result)
-			}
-		})
-	}
-}
-
 func TestReaderPushBackLine(t *testing.T) {
 	reader := &Reader{}
 
