@@ -22,7 +22,6 @@ Field types are as follows:
 - AN= alphanumeric; A-Z, a-z, 0-9, blanks, and special characters as
   noted below.
 
-![](media/image1.wmf){width="6.079861111111111in"
-height="1.9291666666666667in"}
-
 **Table 1**: Allowed Characters
+
+![](images/allowed-characters.png)
