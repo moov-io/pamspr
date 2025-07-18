@@ -1,4 +1,4 @@
-# 3.5 Appendix E - PaymentTypeCode Values 
+# 3.5 Appendix E - PaymentTypeCode Values
 
 Consult Treasury to determine **PaymentTypeCode** and TOP offset
 eligibility.
@@ -6,35 +6,36 @@ eligibility.
 Of note, the following values represent the current list configured in
 PAM and are subject to change.
 
+```
   -----------------------------------------------------------------------
   **PaymentTypeCode**          **Notes**
   ---------------------------- ------------------------------------------
-  Allotment                    
+  Allotment
 
-  Annuity                      
+  Annuity
 
-  ChildSupport                 
+  ChildSupport
 
-  Daily Benefit                
+  Daily Benefit
 
   Education                    Reserved for use by VA
 
-  Fee                          
+  Fee
 
   Insurance                    Reserved for use by VA
 
-  Miscellaneous                
+  Miscellaneous
 
-  Monthly Benefit              
+  Monthly Benefit
 
-  Refund                       
+  Refund
 
-  Salary                       
+  Salary
 
-  Thrift                       
+  Thrift
 
-  Travel                       
+  Travel
 
-  Vendor                       
+  Vendor
   -----------------------------------------------------------------------
-
+```

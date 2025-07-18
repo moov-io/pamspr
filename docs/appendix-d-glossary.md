@@ -1,5 +1,6 @@
 # 3.4 Appendix D - Glossary of Terms
 
+```
   ----------------------------------------------------------------------------------------------
   Field Name                            Definition
   ------------------------------------- --------------------------------------------------------
@@ -84,9 +85,9 @@
   FederalEmployerIdentificationNumber   A number assigned to businesses by the IRS and used by
                                         DHHS for tracking child support payments.
 
-                                        
 
-                                        
+
+
 
   InputSystem                           Identifies the sending trading partner.
 
@@ -159,9 +160,9 @@
   PostNetBarcodeCheckDigit              Part of the PostNet barcode that is applied to the check
                                         for obtaining postage discounts.
 
-                                        
 
-                                        
+
+
 
   Reconcilement                         Free-form field for agency's use in reconciling the
                                         payment using PACER. Data in this field is passed to
@@ -244,6 +245,4 @@
                                         agency must work with their servicing RFC and the US
                                         Postal Service to arrange for this service.
   ----------------------------------------------------------------------------------------------
-
-##  
-
+```

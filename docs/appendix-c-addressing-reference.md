@@ -24,6 +24,7 @@ Workaround 2:
   Records with blank Postal Codes are marked suspect, requiring manual
   processing. This could delay delivery.
 
+```
 +---------------------+--------------+-----------------+-----------------+
 | **Field**           | **Standard** | **Workaround    | **Workaround    |
 |                     |              | 1**             | 2**             |
@@ -55,6 +56,7 @@ Workaround 2:
 +---------------------+--------------+-----------------+-----------------+
 | Consular Code       |              |                 |                 |
 +---------------------+--------------+-----------------+-----------------+
+```
 
 **[Foreign Addresses]{.underline}**
 
@@ -90,6 +92,7 @@ populated are mailed according to foreign mailing rules.
 
 Consular Code can be populated in Consular Code or Postal Code fields.
 
+```
 +-----------------+--------------+--------------+--------------+---------------+
 | **Field**       | **Standard** | **Workaround | **Workaround | **Workaround  |
 |                 |              | 1**          | 2**          | 3**           |
@@ -122,4 +125,4 @@ Consular Code can be populated in Consular Code or Postal Code fields.
 +-----------------+--------------+--------------+--------------+---------------+
 | Consular Code   | -            | -            |              |               |
 +-----------------+--------------+--------------+--------------+---------------+
-
+```

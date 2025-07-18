@@ -2,6 +2,7 @@
 
 This document provides a comprehensive history of changes made to the Payment Automation Manager (PAM) Standard Payment Request (SPR) file format specification over time.
 
+```
 +---------------+-------------+--------------------------------------------------------------+------------+
 | **Version     | **Author**  | **Summary**                                                  | **Date of  |
 | Number**      |             |                                                              | Version**  |
@@ -1391,3 +1392,4 @@ This document provides a comprehensive history of changes made to the Payment Au
 |             | Kampe      |                                       |            |
 |             |            | Changed payment types                 |            |
 +-------------+------------+---------------------------------------+------------+
+```

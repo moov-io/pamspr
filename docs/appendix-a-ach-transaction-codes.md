@@ -3,6 +3,7 @@
 The following table defines the Transaction Code values received in an
 ACH Detail Payment record and the value PAM should record.
 
+```
   ---------------------------------------------------------------------------
    **Transaction  **Definition**                          **Account Type (for
       Code**                                              recording in PAM)**
@@ -12,14 +13,14 @@ ACH Detail Payment record and the value PAM should record.
         23        Checking Account Credit Prenote                  C
 
         24        Checking Account Zero Dollar Credit              C
-                  with remittance                         
+                  with remittance
 
         32        Savings Account Credit                           S
 
         33        Savings Account Credit Prenote                   S
 
         34        Savings Account Zero Dollar Credit with          S
-                  remittance                              
+                  remittance
 
         42        General Ledger Credit                            G
 
@@ -29,10 +30,11 @@ ACH Detail Payment record and the value PAM should record.
 
         53        Loan Account Credit Prenote                      L
   ---------------------------------------------------------------------------
+```
 
-For Custom Agency Rule ID = "IRS" and Depositor Account Number =
-"BONDS":
+For Custom Agency Rule ID = "IRS" and Depositor Account Number = "BONDS":
 
+```
   ---------------------------------------------------------------------------
    **Transaction  **Definition**             **Account Type       **Savings
       Code**                                 (for recording in   Bonds Owner
@@ -42,4 +44,4 @@ For Custom Agency Rule ID = "IRS" and Depositor Account Number =
 
         32        Savings Account Credit     S                      Self
   ---------------------------------------------------------------------------
-
+```

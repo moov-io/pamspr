@@ -11,6 +11,7 @@ payment. Additionally, for IAT payments, PAM will build the Mandatory
 IAT Addenda Records using data provided in the Payment Data record and
 append this remittance addenda if provided by the agency.
 
+```
 +--------------------------------------------------------------------------------------------------------------------------------------+
 | **ACH Addendum Record**                                                                                                              |
 +----------+-------------+----------+----------+------------+------------+------------+--------------+----------+----------+-----------+
@@ -55,54 +56,57 @@ append this remittance addenda if provided by the agency.
 +----------+-------------+----------+----------+------------+------------+------------+--------------+----------+----------+-----------+
 | 03.04    | Filler      |          |          | 748        | 103        | 850        | n/a          |          | n/a      |           |
 +----------+-------------+----------+----------+------------+------------+------------+--------------+----------+----------+-----------+
+```
 
 ###  CTX Validation Rules
 
 The validation rules in the table below apply for Standard Entry Class
 Code "CTX".
 
+```
   -----------------------------------------------------------------------
   **Rule**                **Result**              **Error**
   ----------------------- ----------------------- -----------------------
   If the SEC code is      Mark payment invalid    Reason Group 5 message
   "CTX" and the ISA, BPR,                         3
-  or SE segments are                              
-  missing then mark                               
-  payment invalid.                                
+  or SE segments are
+  missing then mark
+  payment invalid.
 
   If the first ACH        Mark payment invalid    Reason Group 5 message
   Addendum Record in                              3
-  position 23-25 does not                         
-  contain "ISA" then mark                         
-  payment invalid.                                
+  position 23-25 does not
+  contain "ISA" then mark
+  payment invalid.
 
   For the ISA segment,    Mark payment invalid    Reason Group 5 message
   the character in                                3
-  position 26 must equal                          
-  the segment delimiter;                          
-  the character in                                
-  position 128 must equal                         
-  the segment terminator.                         
-  If the segment                                  
-  delimiter equals the                            
-  segment terminator then                         
-  mark the payment                                
-  invalid.                                        
+  position 26 must equal
+  the segment delimiter;
+  the character in
+  position 128 must equal
+  the segment terminator.
+  If the segment
+  delimiter equals the
+  segment terminator then
+  mark the payment
+  invalid.
 
   For the BPR segment, if Mark payment invalid    Reason Group 5 message
   BPR-02 is non-numeric                           3
-  then mark the payment                           
-  invalid                                         
+  then mark the payment
+  invalid
 
   For the SE segment, if  Mark payment invalid    Reason Group 5 message
   SE-01 is non-numeric                            3
-  then mark the payment                           
-  invalid                                         
+  then mark the payment
+  invalid
 
-  Invalid hex cannot be                           
-  used for delimiters (as                         
-  defined in Section 1.3)                         
+  Invalid hex cannot be
+  used for delimiters (as
+  defined in Section 1.3)
   -----------------------------------------------------------------------
+```
 
 ### ACH Addendum Record for CTX payments
 
@@ -115,6 +119,7 @@ For CTX, 999 ACH Addendum records with 10 Addenda are allowed.
 
 Note: one BPR per payment is expected.
 
+```
 +----------------------------------------------------------------------------------------------------------------------------------------+--------------+
 | **ACH Addendum Record**                                                                                                                |              |
 +----------+-------------+----------+----------+------------+------------+------------+--------------+----------+----------+-------------+--------------+
@@ -167,4 +172,4 @@ Note: one BPR per payment is expected.
 +----------+-------------+----------+----------+------------+------------+------------+--------------+----------+----------+-------------+--------------+
 | 04.04    | Filler      |          |          | 28         | 823        | 850        | n/a          |          | n/a      |             |              |
 +----------+-------------+----------+----------+------------+------------+------------+--------------+----------+----------+-------------+--------------+
-
+```

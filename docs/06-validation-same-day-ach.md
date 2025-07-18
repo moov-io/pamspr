@@ -1,27 +1,8 @@
 # 1.6 Validation for Same Day ACH (SDA)
 
-+----------------------------+----------------------+-----------------+
-| **Rule**                   | **Result**           | **Error Code**  |
-+============================+======================+=================+
-| The SPR can only contain   | If not, and the      | Error Reason    |
-| schedules with method of   | IsRequestedForSDA    | Group 4         |
-| payment ACH                | value is "1", reject |                 |
-|                            | the file.            | Message 7       |
-+----------------------------+----------------------+-----------------+
-| All individual payment     | If not, and the      | Error Reason    |
-| amounts must be less than  | IsRequestedForSDA    | Group 4         |
-| or equal to the MAX SDA    | value is "1", reject |                 |
-| Amount (\$1,000,000)       | the file.            | Message 8       |
-+----------------------------+----------------------+-----------------+
-| Payment Type values must   | If not, and the      | Error Reason    |
-| be allowed for SDA.        | IsRequestedForSDA    | Group 4         |
-|                            | value is "1", reject |                 |
-| Restricted Payment Types:  | the file.            | Message 9       |
-|                            |                      |                 |
-| None                       |                      |                 |
-+----------------------------+----------------------+-----------------+
-| SEC code must be a value   | If not, and the      | Error Reason    |
-| other than IAT             | IsRequestedForSDA    | Group 4         |
-|                            | value is "1", reject |                 |
-|                            | the file.            | Message 10      |
-+----------------------------+----------------------+-----------------+
+| Rule | Result | Error Code |
+|------|--------|------------|
+| The SPR can only contain schedules with method of payment ACH | If not, and the IsRequestedForSDA value is "1", reject the file. | Error Reason Group 4 Message 7 |
+| All individual payment amounts must be less than or equal to the MAX SDA Amount ($1,000,000) | If not, and the IsRequestedForSDA value is "1", reject the file. | Error Reason Group 4 Message 8 |
+| Payment Type values must be allowed for SDA. Restricted Payment Types: None | If not, and the IsRequestedForSDA value is "1", reject the file. | Error Reason Group 4 Message 9 |
+| SEC code must be a value other than IAT | If not, and the IsRequestedForSDA value is "1", reject the file. | Error Reason Group 4 Message 10 |
