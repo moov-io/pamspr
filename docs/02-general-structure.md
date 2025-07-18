@@ -40,8 +40,6 @@ Or
 
 - CARS TAS/BETC Record RC=G (none-many for each ACH Payment Data Record)
 
-- 
-
 - DNP Record RC=DD (none- one for each ACH Payment Data Record)
 
 <!-- -->
@@ -64,8 +62,6 @@ Or
 
 - CARS TAS/BETC Record RC=G (none - many for each Check Payment Data
   Record)
-
-- 
 
 - DNP Record RC=DD (none- one for each Check Payment Data Record)
 
