@@ -19,3 +19,37 @@ func TestRead_ShortLinesNoPanic(t *testing.T) {
 		}(in)
 	}
 }
+
+func TestParseSchedule_ShortLine(t *testing.T) {
+	r := NewReader(strings.NewReader(""))
+	if _, err := r.parseSchedule(""); err == nil {
+		t.Fatal("expected error for empty schedule line")
+	}
+	if _, err := r.parseSchedule("0"); err == nil {
+		t.Fatal("expected error for 1-char schedule line")
+	}
+	if _, err := r.parseScheduleHeader("X"); err == nil {
+		t.Fatal("expected error for short schedule header")
+	}
+}
+
+func TestReader_ProcessFileEmpty(t *testing.T) {
+	r := NewReader(strings.NewReader(""))
+	err := r.ProcessFile(nil, nil, nil)
+	if err == nil {
+		t.Fatal("expected error for empty file")
+	}
+}
+
+func TestReader_ValidateStructureShortLines(t *testing.T) {
+	// Valid-length lines that are not a complete file
+	pad := func(s string) string {
+		if len(s) >= RecordLength {
+			return s[:RecordLength]
+		}
+		return s + strings.Repeat(" ", RecordLength-len(s))
+	}
+	content := pad("H TEST") + "\n" + pad("01") + "\n"
+	r := NewReader(strings.NewReader(content))
+	_ = r.ValidateFileStructureOnly() // must not panic
+}
