@@ -228,10 +228,10 @@ func generateFileTrailer(totalRecords, totalPayments, totalAmount string) string
 // writeFile writes content to a file
 func writeFile(filename, content string) error {
 	dir := filepath.Dir(filename)
-	if err := os.MkdirAll(dir, 0755); err != nil { //nolint:gosec
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
-	return os.WriteFile(filename, []byte(content), 0644) //nolint:gosec
+	return os.WriteFile(filename, []byte(content), 0o600)
 }
 
 func main() {
