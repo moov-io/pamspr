@@ -323,6 +323,9 @@ func (r *Reader) ValidateFileStructureOnly() error {
 		if len(line) != RecordLength {
 			return fmt.Errorf("line %d: invalid record length %d, expected %d", r.lineNum, len(line), RecordLength)
 		}
+		if len(line) < 2 {
+			return fmt.Errorf("line %d: line too short", r.lineNum)
+		}
 
 		recordCode := line[:2]
 
@@ -446,6 +449,9 @@ func (r *Reader) readFileHeader() (*FileHeader, error) {
 }
 
 func (r *Reader) parseScheduleHeader(line string) (Schedule, error) {
+	if len(line) < 2 {
+		return nil, fmt.Errorf("schedule header line too short: %q", line)
+	}
 	recordCode := line[:2]
 
 	switch recordCode {
@@ -636,6 +642,9 @@ func (r *Reader) readAllLegacyCompatible() (*File, error) {
 
 // parseSchedule parses a schedule starting with the given line
 func (r *Reader) parseSchedule(firstLine string) (Schedule, error) {
+	if len(firstLine) < 2 {
+		return nil, fmt.Errorf("schedule line too short: %q", firstLine)
+	}
 	recordCode := firstLine[:2]
 
 	switch recordCode {
@@ -673,6 +682,9 @@ func (r *Reader) parseACHSchedule(headerLine string) (*ACHSchedule, error) {
 		line, ok := r.scanLine()
 		if !ok {
 			return nil, fmt.Errorf("unexpected end of file in ACH schedule")
+		}
+		if len(line) < 2 {
+			return nil, fmt.Errorf("line too short in ACH schedule: %q", line)
 		}
 
 		recordCode := line[:2]
@@ -766,6 +778,9 @@ func (r *Reader) parseCheckSchedule(headerLine string) (*CheckSchedule, error) {
 		line, ok := r.scanLine()
 		if !ok {
 			return nil, fmt.Errorf("unexpected end of file in check schedule")
+		}
+		if len(line) < 2 {
+			return nil, fmt.Errorf("line too short in check schedule: %q", line)
 		}
 
 		recordCode := line[:2]
