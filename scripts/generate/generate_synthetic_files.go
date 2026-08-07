@@ -231,7 +231,7 @@ func writeFile(filename, content string) error {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
-	return os.WriteFile(filename, []byte(content), 0644)
+	return os.WriteFile(filename, []byte(content), 0o600)
 }
 
 func main() {
