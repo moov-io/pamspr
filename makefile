@@ -7,3 +7,7 @@ else
 	@chmod +x ./lint-project.sh
 	COVER_THRESHOLD=60.0 time ./lint-project.sh
 endif
+
+.PHONY: bench
+bench:
+	go test ./pkg/pamspr -count=1 -run '^$$' -bench '^BenchmarkStreamingWriter_vs_TraditionalWriter$$' -benchmem | tee output.txt
