@@ -321,6 +321,9 @@ func (p *ACHPayment) Validate() error {
 	if p.PaymentID == "" {
 		return fmt.Errorf("ACH payment must have a payment ID")
 	}
+	if err := (&Validator{}).validateRoutingNumber(p.RoutingNumber); err != nil {
+		return fmt.Errorf("ACH payment routing number: %w", err)
+	}
 	return nil
 }
 

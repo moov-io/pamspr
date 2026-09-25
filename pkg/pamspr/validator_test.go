@@ -806,3 +806,15 @@ func TestValidateFileStructure(t *testing.T) {
 		})
 	}
 }
+
+func TestACHPaymentValidateRejectsBadRouting(t *testing.T) {
+	payment := &ACHPayment{
+		Amount:        100000,
+		PayeeName:     "JOHN DOE",
+		PaymentID:     "PAY001",
+		RoutingNumber: "123456789",
+	}
+	if err := payment.Validate(); err == nil {
+		t.Fatal("expected routing number 123456789 to fail ACHPayment.Validate")
+	}
+}
