@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790586918337,
+  "lastUpdate": 1790673782463,
   "repoUrl": "https://github.com/moov-io/pamspr",
   "entries": {
     "moov-io/pamspr": [
@@ -2490,6 +2490,172 @@ window.BENCHMARK_DATA = {
             "value": 40138,
             "unit": "allocs/op",
             "extra": "148 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Sash",
+            "username": "SashaMIT",
+            "email": "sash@ela.city"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "ac6978bc3aa15c0b4aaff0803defabafdbe2d07e",
+          "message": "Check the ABA routing number in ACHPayment.Validate (#23)\n\nSchedule validation calls this method. A nine-digit number with a bad check digit was accepted even though Validator.validateRoutingNumber rejects it.",
+          "timestamp": "2026-09-25T14:22:57Z",
+          "url": "https://github.com/moov-io/pamspr/commit/ac6978bc3aa15c0b4aaff0803defabafdbe2d07e"
+        },
+        "date": 1790673781787,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_100_payments",
+            "value": 160647,
+            "unit": "ns/op\t  359670 B/op\t     431 allocs/op",
+            "extra": "7406 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_100_payments - ns/op",
+            "value": 160647,
+            "unit": "ns/op",
+            "extra": "7406 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_100_payments - B/op",
+            "value": 359670,
+            "unit": "B/op",
+            "extra": "7406 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_100_payments - allocs/op",
+            "value": 431,
+            "unit": "allocs/op",
+            "extra": "7406 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_100_payments",
+            "value": 166396,
+            "unit": "ns/op\t  359671 B/op\t     431 allocs/op",
+            "extra": "7226 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_100_payments - ns/op",
+            "value": 166396,
+            "unit": "ns/op",
+            "extra": "7226 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_100_payments - B/op",
+            "value": 359671,
+            "unit": "B/op",
+            "extra": "7226 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_100_payments - allocs/op",
+            "value": 431,
+            "unit": "allocs/op",
+            "extra": "7226 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_1000_payments",
+            "value": 1621202,
+            "unit": "ns/op\t 3023406 B/op\t    4043 allocs/op",
+            "extra": "682 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_1000_payments - ns/op",
+            "value": 1621202,
+            "unit": "ns/op",
+            "extra": "682 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_1000_payments - B/op",
+            "value": 3023406,
+            "unit": "B/op",
+            "extra": "682 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_1000_payments - allocs/op",
+            "value": 4043,
+            "unit": "allocs/op",
+            "extra": "682 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_1000_payments",
+            "value": 1641924,
+            "unit": "ns/op\t 3023419 B/op\t    4043 allocs/op",
+            "extra": "700 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_1000_payments - ns/op",
+            "value": 1641924,
+            "unit": "ns/op",
+            "extra": "700 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_1000_payments - B/op",
+            "value": 3023419,
+            "unit": "B/op",
+            "extra": "700 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_1000_payments - allocs/op",
+            "value": 4043,
+            "unit": "allocs/op",
+            "extra": "700 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_10000_payments",
+            "value": 17401460,
+            "unit": "ns/op\t42777539 B/op\t   40137 allocs/op",
+            "extra": "69 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_10000_payments - ns/op",
+            "value": 17401460,
+            "unit": "ns/op",
+            "extra": "69 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_10000_payments - B/op",
+            "value": 42777539,
+            "unit": "B/op",
+            "extra": "69 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_10000_payments - allocs/op",
+            "value": 40137,
+            "unit": "allocs/op",
+            "extra": "69 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_10000_payments",
+            "value": 17024513,
+            "unit": "ns/op\t42777575 B/op\t   40138 allocs/op",
+            "extra": "68 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_10000_payments - ns/op",
+            "value": 17024513,
+            "unit": "ns/op",
+            "extra": "68 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_10000_payments - B/op",
+            "value": 42777575,
+            "unit": "B/op",
+            "extra": "68 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_10000_payments - allocs/op",
+            "value": 40138,
+            "unit": "allocs/op",
+            "extra": "68 times\n4 procs"
           }
         ]
       }
