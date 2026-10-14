@@ -10,4 +10,5 @@ endif
 
 .PHONY: bench
 bench:
-	go test ./pkg/pamspr -count=1 -run '^$$' -bench '^BenchmarkStreamingWriter_vs_TraditionalWriter$$' -benchmem | tee output.txt
+	go test ./pkg/pamspr -count=6 -cpu=2 -run '^$$' -bench '^BenchmarkStreamingWriter_vs_TraditionalWriter$$' -benchmem > output.raw.txt
+	python3 scripts/bench-median.py output.raw.txt | tee output.txt
