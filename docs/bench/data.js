@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794131277507,
+  "lastUpdate": 1794221295149,
   "repoUrl": "https://github.com/moov-io/pamspr",
   "entries": {
     "moov-io/pamspr": [
@@ -9794,6 +9794,172 @@ window.BENCHMARK_DATA = {
             "value": 40136,
             "unit": "allocs/op",
             "extra": "52 times\n2 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "renovate[bot]",
+            "username": "renovate[bot]",
+            "email": "29139614+renovate[bot]@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "f3ca30e6cab78bd26b2a1de3584ae16bc2588e30",
+          "message": "chore(deps): update github/codeql-action action to v4.39.3 (#29)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2026-11-04T21:09:27Z",
+          "url": "https://github.com/moov-io/pamspr/commit/f3ca30e6cab78bd26b2a1de3584ae16bc2588e30"
+        },
+        "date": 1794221294568,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_100_payments",
+            "value": 89714,
+            "unit": "ns/op\t359635 B/op\t431 allocs/op",
+            "extra": "13450 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_100_payments - ns/op",
+            "value": 89714,
+            "unit": "ns/op",
+            "extra": "13450 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_100_payments - B/op",
+            "value": 359635,
+            "unit": "B/op",
+            "extra": "13450 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_100_payments - allocs/op",
+            "value": 431,
+            "unit": "allocs/op",
+            "extra": "13450 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_100_payments",
+            "value": 90633.5,
+            "unit": "ns/op\t359635 B/op\t431 allocs/op",
+            "extra": "13610 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_100_payments - ns/op",
+            "value": 90633.5,
+            "unit": "ns/op",
+            "extra": "13610 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_100_payments - B/op",
+            "value": 359635,
+            "unit": "B/op",
+            "extra": "13610 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_100_payments - allocs/op",
+            "value": 431,
+            "unit": "allocs/op",
+            "extra": "13610 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_1000_payments",
+            "value": 920867,
+            "unit": "ns/op\t3023006 B/op\t4041 allocs/op",
+            "extra": "1242 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_1000_payments - ns/op",
+            "value": 920867,
+            "unit": "ns/op",
+            "extra": "1242 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_1000_payments - B/op",
+            "value": 3023006,
+            "unit": "B/op",
+            "extra": "1242 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_1000_payments - allocs/op",
+            "value": 4041,
+            "unit": "allocs/op",
+            "extra": "1242 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_1000_payments",
+            "value": 939000,
+            "unit": "ns/op\t3023010 B/op\t4041 allocs/op",
+            "extra": "1245 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_1000_payments - ns/op",
+            "value": 939000,
+            "unit": "ns/op",
+            "extra": "1245 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_1000_payments - B/op",
+            "value": 3023010,
+            "unit": "B/op",
+            "extra": "1245 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_1000_payments - allocs/op",
+            "value": 4041,
+            "unit": "allocs/op",
+            "extra": "1245 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_10000_payments",
+            "value": 10151585.5,
+            "unit": "ns/op\t42777244 B/op\t40137 allocs/op",
+            "extra": "118 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_10000_payments - ns/op",
+            "value": 10151585.5,
+            "unit": "ns/op",
+            "extra": "118 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_10000_payments - B/op",
+            "value": 42777244,
+            "unit": "B/op",
+            "extra": "118 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Traditional_Writer_10000_payments - allocs/op",
+            "value": 40137,
+            "unit": "allocs/op",
+            "extra": "118 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_10000_payments",
+            "value": 10341294,
+            "unit": "ns/op\t42777238 B/op\t40137 allocs/op",
+            "extra": "112 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_10000_payments - ns/op",
+            "value": 10341294,
+            "unit": "ns/op",
+            "extra": "112 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_10000_payments - B/op",
+            "value": 42777238,
+            "unit": "B/op",
+            "extra": "112 times\n2 procs"
+          },
+          {
+            "name": "BenchmarkStreamingWriter_vs_TraditionalWriter/Streaming_Writer_10000_payments - allocs/op",
+            "value": 40137,
+            "unit": "allocs/op",
+            "extra": "112 times\n2 procs"
           }
         ]
       }
