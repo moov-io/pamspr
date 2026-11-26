@@ -191,11 +191,6 @@ func (fb *FileBuilder) WithHeader(inputSystem, version string, sameDayACH bool) 
 
 // StartACHSchedule starts building an ACH schedule
 func (fb *FileBuilder) StartACHSchedule(scheduleNum, paymentType, alc, secCode string) *FileBuilder {
-	// Save current schedule if exists
-	if fb.currentSchedule != nil {
-		fb.file.Schedules = append(fb.file.Schedules, fb.currentSchedule)
-	}
-
 	schedule := &ACHSchedule{
 		Header: &ACHScheduleHeader{
 			RecordCode:             "01",
@@ -212,17 +207,13 @@ func (fb *FileBuilder) StartACHSchedule(scheduleNum, paymentType, alc, secCode s
 		},
 	}
 
+	fb.file.Schedules = append(fb.file.Schedules, schedule)
 	fb.currentSchedule = schedule
 	return fb
 }
 
 // StartCheckSchedule starts building a check schedule
 func (fb *FileBuilder) StartCheckSchedule(scheduleNum, paymentType, alc, enclosureCode string) *FileBuilder {
-	// Save current schedule if exists
-	if fb.currentSchedule != nil {
-		fb.file.Schedules = append(fb.file.Schedules, fb.currentSchedule)
-	}
-
 	schedule := &CheckSchedule{
 		Header: &CheckScheduleHeader{
 			RecordCode:                "11",
@@ -239,6 +230,7 @@ func (fb *FileBuilder) StartCheckSchedule(scheduleNum, paymentType, alc, enclosu
 		},
 	}
 
+	fb.file.Schedules = append(fb.file.Schedules, schedule)
 	fb.currentSchedule = schedule
 	return fb
 }
@@ -277,15 +269,10 @@ func (fb *FileBuilder) AddCheckPayment(payment *CheckPayment) *FileBuilder {
 	return fb
 }
 
-// Build finalizes the file and calculates totals
+// Build calculates totals and returns the builder's file.
 func (fb *FileBuilder) Build() (*File, error) {
 	if len(fb.errors) > 0 {
 		return nil, fmt.Errorf("build errors: %v", fb.errors)
-	}
-
-	// Add last schedule
-	if fb.currentSchedule != nil {
-		fb.file.Schedules = append(fb.file.Schedules, fb.currentSchedule)
 	}
 
 	// Calculate schedule trailers

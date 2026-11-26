@@ -625,6 +625,118 @@ func TestFileBuilder_MultipleSchedules(t *testing.T) {
 	}
 }
 
+func TestFileBuilder_RepeatedBuild(t *testing.T) {
+	tests := []struct {
+		name        string
+		paymentType PaymentType
+		addSchedule func(*FileBuilder)
+	}{
+		{
+			name:        "ACH",
+			paymentType: PaymentTypeACH,
+			addSchedule: func(builder *FileBuilder) {
+				builder.StartACHSchedule("00000000000001", "Vendor", "12345678", "CCD").
+					AddACHPayment(&ACHPayment{PaymentID: "P1", Amount: 12345})
+			},
+		},
+		{
+			name:        "Check",
+			paymentType: PaymentTypeCheck,
+			addSchedule: func(builder *FileBuilder) {
+				builder.StartCheckSchedule("00000000000001", "Vendor", "12345678", "stub").
+					AddCheckPayment(&CheckPayment{PaymentID: "P1", Amount: 12345})
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := NewFileBuilder().WithHeader("TEST SYSTEM", "502", false)
+			tt.addSchedule(builder)
+			want := fileBuilderScheduleExpectation{tt.paymentType, []string{"P1"}, 12345}
+			for call := 1; call <= 3; call++ {
+				checkFileBuilderBuild(t, builder, call, 5, 1, 12345, want)
+			}
+		})
+	}
+}
+
+func TestFileBuilder_AddPaymentAfterBuild(t *testing.T) {
+	builder := NewFileBuilder().WithHeader("TEST SYSTEM", "502", false).
+		StartACHSchedule("00000000000001", "Vendor", "12345678", "CCD").
+		AddACHPayment(&ACHPayment{PaymentID: "P1", Amount: 12345})
+	checkFileBuilderBuild(t, builder, 1, 5, 1, 12345,
+		fileBuilderScheduleExpectation{PaymentTypeACH, []string{"P1"}, 12345})
+
+	builder.AddACHPayment(&ACHPayment{PaymentID: "P2", Amount: 655})
+	want := fileBuilderScheduleExpectation{PaymentTypeACH, []string{"P1", "P2"}, 13000}
+	for call := 2; call <= 3; call++ {
+		checkFileBuilderBuild(t, builder, call, 6, 2, 13000, want)
+	}
+}
+
+func TestFileBuilder_StartScheduleAfterBuild(t *testing.T) {
+	builder := NewFileBuilder().WithHeader("TEST SYSTEM", "502", false).
+		StartACHSchedule("00000000000001", "Vendor", "12345678", "CCD").
+		AddACHPayment(&ACHPayment{PaymentID: "P1", Amount: 12345})
+	wantACH := fileBuilderScheduleExpectation{PaymentTypeACH, []string{"P1"}, 12345}
+	checkFileBuilderBuild(t, builder, 1, 5, 1, 12345, wantACH)
+
+	builder.StartCheckSchedule("00000000000002", "Refund", "87654321", "stub").
+		AddCheckPayment(&CheckPayment{PaymentID: "P2", Amount: 2000})
+	wantCheck := fileBuilderScheduleExpectation{PaymentTypeCheck, []string{"P2"}, 2000}
+	for call := 2; call <= 3; call++ {
+		checkFileBuilderBuild(t, builder, call, 8, 2, 14345, wantACH, wantCheck)
+	}
+}
+
+type fileBuilderScheduleExpectation struct {
+	paymentType PaymentType
+	paymentIDs  []string
+	amount      int64
+}
+
+func checkFileBuilderBuild(t *testing.T, builder *FileBuilder, call int, wantRecords, wantPayments, wantAmount int64, wantSchedules ...fileBuilderScheduleExpectation) {
+	t.Helper()
+	file, err := builder.Build()
+	if err != nil {
+		t.Fatalf("Build #%d: %v", call, err)
+	}
+	if file == nil || file.Trailer == nil {
+		t.Fatalf("Build #%d: missing file or file trailer", call)
+	}
+	trailer := file.Trailer
+	if trailer.TotalCountRecords != wantRecords || trailer.TotalCountPayments != wantPayments || trailer.TotalAmountPayments != wantAmount {
+		t.Errorf("Build #%d: file totals (records, payments, cents) = (%d, %d, %d), want (%d, %d, %d)",
+			call, trailer.TotalCountRecords, trailer.TotalCountPayments, trailer.TotalAmountPayments, wantRecords, wantPayments, wantAmount)
+	}
+	if len(file.Schedules) != len(wantSchedules) {
+		t.Fatalf("Build #%d: got %d schedules, want %d", call, len(file.Schedules), len(wantSchedules))
+	}
+	for i, want := range wantSchedules {
+		schedule := file.Schedules[i]
+		if got := schedule.GetPaymentType(); got != want.paymentType {
+			t.Errorf("Build #%d: schedule %d payment type = %v, want %v", call, i, got, want.paymentType)
+		}
+		payments := schedule.GetPayments()
+		if len(payments) != len(want.paymentIDs) {
+			t.Fatalf("Build #%d: schedule %d has %d payments, want %d", call, i, len(payments), len(want.paymentIDs))
+		}
+		for j, wantID := range want.paymentIDs {
+			if got := payments[j].GetPaymentID(); got != wantID {
+				t.Errorf("Build #%d: schedule %d payment %d ID = %q, want %q", call, i, j, got, wantID)
+			}
+		}
+		trailer := schedule.GetTrailer()
+		if trailer == nil {
+			t.Fatalf("Build #%d: schedule %d is missing its trailer", call, i)
+		}
+		if trailer.ScheduleCount != int64(len(want.paymentIDs)) || trailer.ScheduleAmount != want.amount {
+			t.Errorf("Build #%d: schedule %d totals (payments, cents) = (%d, %d), want (%d, %d)",
+				call, i, trailer.ScheduleCount, trailer.ScheduleAmount, len(want.paymentIDs), want.amount)
+		}
+	}
+}
+
 // TestAgencyReconcilementParser_ParseIRSReconcilement tests IRS reconcilement parsing
 func TestAgencyReconcilementParser_ParseIRSReconcilement(t *testing.T) {
 	arp := &AgencyReconcilementParser{}
