@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-var readmeGoFence = regexp.MustCompile("(?s)```go\\n(.*?)```")
+var readmeGoFence = regexp.MustCompile("(?s)```go\r?\n(.*?)```")
 
 func TestREADMEExamplesCompile(t *testing.T) {
 	root, err := os.Getwd()
@@ -42,7 +42,7 @@ func TestREADMEExamplesCompile(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(src), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			mod := "module readme-example\n\ngo 1.24.4\n\nrequire github.com/moov-io/pamspr v0.0.0\n\nreplace github.com/moov-io/pamspr => " + root + "\n"
+			mod := "module readme-example\n\ngo 1.24.4\n\nrequire github.com/moov-io/pamspr v0.0.0\n\nreplace github.com/moov-io/pamspr => " + strconv.Quote(root) + "\n"
 			if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(mod), 0o644); err != nil {
 				t.Fatal(err)
 			}
