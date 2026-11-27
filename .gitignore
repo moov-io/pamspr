@@ -45,3 +45,12 @@ gitleaks.tar.gz
 coverage.html
 cover.out
 coverage.txt
+
+# Local CLI binary (do not commit a compiled pamspr at the repo root)
+/pamspr
+
+# Example program output
+/ach_payments.txt
+/check_payments.txt
+/ach_payments.spr
+/check_payments.spr

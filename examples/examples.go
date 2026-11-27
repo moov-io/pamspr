@@ -4,9 +4,26 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/moov-io/pamspr/pkg/pamspr"
 )
+
+// outputDir is the directory for example payment files.
+// main() sets this to a temporary directory.
+var outputDir string
+
+func outputPath(name string) string {
+	if outputDir == "" {
+		dir, err := os.MkdirTemp("", "pamspr-examples-")
+		if err != nil {
+			log.Fatal(err)
+		}
+		outputDir = dir
+	}
+	return filepath.Join(outputDir, name)
+}
 
 // Example 1: Create an ACH payment file
 func CreateACHFile() {
@@ -138,7 +155,7 @@ func CreateACHFile() {
 	}
 
 	// Write to file
-	outputFile, err := os.Create("ach_payments.txt")
+	outputFile, err := os.Create(outputPath("ach_payments.txt"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -170,7 +187,7 @@ func ParseAndValidateFile(filename string) {
 
 	// Display file information
 	fmt.Printf("File Header:\n")
-	fmt.Printf("  Input System: %s\n", file.Header.InputSystem)
+	fmt.Printf("  Input System: %s\n", strings.TrimSpace(file.Header.InputSystem))
 	fmt.Printf("  Version: %s\n", file.Header.StandardPaymentVersion)
 	fmt.Printf("  Same Day ACH: %s\n", file.Header.IsRequestedForSameDayACH)
 
@@ -185,9 +202,9 @@ func ParseAndValidateFile(filename string) {
 		// Show payment details
 		for j, payment := range schedule.GetPayments() {
 			fmt.Printf("\n  Payment %d:\n", j+1)
-			fmt.Printf("    Payment ID: %s\n", payment.GetPaymentID())
+			fmt.Printf("    Payment ID: %s\n", strings.TrimSpace(payment.GetPaymentID()))
 			fmt.Printf("    Amount: $%.2f\n", float64(payment.GetAmount())/100)
-			fmt.Printf("    Payee: %s\n", payment.GetPayeeName())
+			fmt.Printf("    Payee: %s\n", strings.TrimSpace(payment.GetPayeeName()))
 		}
 	}
 
@@ -288,7 +305,7 @@ func CreateCheckFile() {
 	}
 
 	// Write file
-	outputFile, err := os.Create("check_payments.txt")
+	outputFile, err := os.Create(outputPath("check_payments.txt"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -306,51 +323,68 @@ func CreateCheckFile() {
 func ValidateSameDayACH() {
 	validator := pamspr.NewValidator()
 
-	file := &pamspr.File{
-		Header: &pamspr.FileHeader{
-			RecordCode:               "H ",
-			InputSystem:              "SDA_SYSTEM",
-			StandardPaymentVersion:   "502",
-			IsRequestedForSameDayACH: "1", // Same Day ACH requested
-		},
+	// Same Day ACH limits are file-level rules (IsRequestedForSameDayACH = "1").
+	// Use ValidateSameDayACH or ValidateFileStructure on a complete file.
+	// ValidateACHPayment does not apply the $1,000,000 Same Day ACH limit.
+	validFile, err := buildSameDayACHFile(50000) // $500.00 - under the limit
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	// Validate the file structure first
-	err := validator.ValidateFileStructure(file)
-	if err != nil {
-		fmt.Printf("File validation failed: %v\n", err)
+	if err := validator.ValidateFileStructure(validFile); err != nil {
+		fmt.Printf("Valid file failed: %v\n", err)
 	} else {
-		fmt.Println("File validation passed")
+		fmt.Println("Valid Same Day ACH file passed validation")
 	}
 
-	// This will pass validation
-	validPayment := &pamspr.ACHPayment{
-		Amount:              50000, // $500.00 - under SDA limit
-		ACH_TransactionCode: "22",
+	if err := validator.ValidateSameDayACH(validFile); err != nil {
+		fmt.Printf("Valid file failed Same Day ACH checks: %v\n", err)
 	}
 
-	// This will fail validation - amount too high
-	invalidPayment := &pamspr.ACHPayment{
-		Amount:              200000000, // $2,000,000 - over SDA limit
-		ACH_TransactionCode: "22",
-	}
-
-	// Test valid payment
-	err = validator.ValidateACHPayment(validPayment)
+	invalidFile, err := buildSameDayACHFile(200000000) // $2,000,000 - over the limit
 	if err != nil {
-		fmt.Printf("Valid payment failed: %v\n", err)
+		log.Fatal(err)
+	}
+
+	if err := validator.ValidateSameDayACH(invalidFile); err != nil {
+		fmt.Printf("Invalid file failed as expected: %v\n", err)
 	} else {
-		fmt.Println("Valid payment passed validation")
-	}
-
-	// Test invalid payment
-	err = validator.ValidateACHPayment(invalidPayment)
-	if err != nil {
-		fmt.Printf("Invalid payment failed as expected: %v\n", err)
+		fmt.Println("Invalid $2,000,000 payment was not rejected")
 	}
 }
 
+func buildSameDayACHFile(amount int64) (*pamspr.File, error) {
+	return pamspr.NewFileBuilder().
+		WithHeader("SDA_SYSTEM", "502", true).
+		StartACHSchedule("SCH001", "Salary", "12345678", "PPD").
+		AddACHPayment(&pamspr.ACHPayment{
+			AgencyAccountIdentifier:      "EMP001",
+			Amount:                       amount,
+			AgencyPaymentTypeCode:        "S",
+			IsTOP_Offset:                 "1",
+			PayeeName:                    "JOHN DOE",
+			PayeeAddressLine1:            "123 MAIN ST",
+			CityName:                     "WASHINGTON",
+			StateCodeText:                "DC",
+			PostalCode:                   "20001",
+			RoutingNumber:                "021000021",
+			AccountNumber:                "1234567890",
+			ACH_TransactionCode:          "22",
+			PaymentID:                    "PAY001",
+			TIN:                          "123456789",
+			PaymentRecipientTINIndicator: "1",
+		}).
+		Build()
+}
+
 func main() {
+	dir, err := os.MkdirTemp("", "pamspr-examples-")
+	if err != nil {
+		log.Fatal(err)
+	}
+	outputDir = dir
+	fmt.Printf("Writing example files to %s\n", outputDir)
+
 	fmt.Println("PAM SPR Library Examples")
 	fmt.Println("========================")
 
@@ -360,7 +394,7 @@ func main() {
 
 	// Example 2: Parse the created file
 	fmt.Println("\n2. Parsing ACH payment file...")
-	ParseAndValidateFile("ach_payments.txt")
+	ParseAndValidateFile(outputPath("ach_payments.txt"))
 
 	// Example 3: Create check file
 	fmt.Println("\n3. Creating check payment file...")

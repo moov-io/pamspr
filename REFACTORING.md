@@ -505,7 +505,7 @@ This document tracks the refactoring effort to improve code maintainability and 
 - ✅ **Testing**: 250+ comprehensive test cases with high coverage
 - ✅ **Security**: Comprehensive input validation and bounds checking
 - ✅ **Code Quality**: Clean interfaces, centralized definitions, consistent formatting
-- ✅ **Production Ready**: Library suitable for federal agency use with high-performance streaming
+- ⚠️ **Production status**: Format validation and streaming are complete. Federal agencies cannot use this library in production until Treasury-approved business rules and official test files are available.
 
 **Next Steps**: Ready to proceed with Phases 6-7, 9-10 for additional features and Treasury integration.
 
@@ -657,6 +657,6 @@ This document tracks the refactoring effort to improve code maintainability and 
 ## Resources
 
 - [Original Design Doc](CLAUDE.md)
-- [Test Coverage Report](coverage.html)
-- [Performance Benchmarks](benchmarks.txt)
-- [Agency-Specific Validation Requirements](https://fiscal.treasury.gov/pam-spr/) (External)
+- Test coverage: run `go test -coverprofile=coverage.out ./...` and `go tool cover -html=coverage.out`
+- Performance benchmarks: run `make bench`
+- [Formats for Payment Requests (PAM SPR)](https://fiscal.treasury.gov/payments-from-government/payment-automation-manager-pam/payment-request-formats) (External)

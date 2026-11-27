@@ -51,7 +51,9 @@ The pre-commit hook runs automatically when you commit and includes:
 
 ### Linting Configuration
 
-The project includes `.golangci.yml` with the same linters used in GitHub:
+This repository does not include a `.golangci.yml` file. `make check` downloads the shared [moov-io/infra lint-project.sh](https://github.com/moov-io/infra/blob/master/go/lint-project.sh) script and runs the Moov lint suite, including golangci-lint. You can also run `golangci-lint run` locally if you have it installed.
+
+The GitHub pipeline uses those linters:
 
 - **exhaustive** - Ensures all enum values are handled in switch statements
 - **gosec** - Security vulnerability detection
