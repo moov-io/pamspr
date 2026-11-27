@@ -315,9 +315,13 @@ pamspr -create ach -output sample_ach.spr
 pamspr -create check -output sample_check.spr
 ```
 
-### Convert to JSON (Future Feature)
+### Convert to JSON
+
+JSON conversion is not implemented. The command returns an error:
+
 ```bash
 pamspr -convert -input payments.spr -output payments.json
+# not implemented
 ```
 
 ## Performance & Memory Management

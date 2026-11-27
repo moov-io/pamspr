@@ -38,7 +38,9 @@ func main() {
 		if *input == "" || *output == "" {
 			log.Fatal("Both input and output files required for conversion")
 		}
-		convertToJSON(*input, *output)
+		if err := convertToJSON(*input, *output); err != nil {
+			log.Fatal(err)
+		}
 
 	case *create != "":
 		if *output == "" {
@@ -154,12 +156,8 @@ func displayFileInfo(filename string) {
 	fmt.Printf("  Amount: $%.2f\n", float64(pamFile.Trailer.TotalAmountPayments)/100)
 }
 
-func convertToJSON(inputFile, outputFile string) {
-	// This would convert the PAM SPR file to JSON format
-	// Implementation would use encoding/json package
-	fmt.Printf("Converting %s to JSON format...\n", inputFile)
-	fmt.Printf("Output will be saved to %s\n", outputFile)
-	// TODO: Implement JSON conversion
+func convertToJSON(inputFile, outputFile string) error {
+	return fmt.Errorf("not implemented")
 }
 
 func createSampleFile(fileType, outputFile string) {
