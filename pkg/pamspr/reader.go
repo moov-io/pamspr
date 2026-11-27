@@ -203,10 +203,7 @@ func (r *Reader) ProcessFile(
 			scheduleIndex++
 
 		case "E ": // File trailer
-			// Call record callback for trailer
-			if recordCallback != nil {
-				recordCallback("E ", r.lineNum, line)
-			}
+			// The record callback already ran for this line above.
 			return nil // End of schedules
 
 		default:
@@ -347,6 +344,7 @@ func (r *Reader) ValidateFileStructureOnly() error {
 
 		case "01", "11":
 			scheduleCount++
+			r.stats.SchedulesProcessed++
 
 		case "E ":
 			hasTrailer = true
@@ -355,14 +353,17 @@ func (r *Reader) ValidateFileStructureOnly() error {
 				return fmt.Errorf("line %d: records found after file trailer", r.lineNum+1)
 			}
 
-		case "02", "12", "03", "04", "13", "G ", "DD", "T ":
-			// Valid record types, just count them
+		case "02", "12":
+			r.stats.PaymentsProcessed++
+
+		case "03", "04", "13", "G ", "DD", "T ":
+			// Valid associated records and schedule trailers
 
 		default:
 			return fmt.Errorf("line %d: invalid record code '%s'", r.lineNum, recordCode)
 		}
 
-		r.stats.LinesProcessed++
+		// LinesProcessed is incremented in scanLine. Do not count a line twice.
 	}
 
 	if !hasHeader {
@@ -460,14 +461,14 @@ func (r *Reader) parseScheduleHeader(line string) (Schedule, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &ACHSchedule{Header: header, BaseSchedule: BaseSchedule{}}, nil
+		return &ACHSchedule{Header: header, BaseSchedule: baseScheduleFromHeader(header.ScheduleNumber, header.PaymentTypeCode, header.AgencyLocationCode)}, nil
 
 	case "11":
 		header, err := r.checkParser.ParseCheckScheduleHeader(line)
 		if err != nil {
 			return nil, err
 		}
-		return &CheckSchedule{Header: header, BaseSchedule: BaseSchedule{}}, nil
+		return &CheckSchedule{Header: header, BaseSchedule: baseScheduleFromHeader(header.ScheduleNumber, header.PaymentTypeCode, header.AgencyLocationCode)}, nil
 
 	default:
 		return nil, fmt.Errorf("invalid schedule header record code: %s", recordCode)
@@ -493,6 +494,13 @@ func (r *Reader) processSchedulePayments(
 		}
 
 		recordCode := line[:2]
+
+		// Next schedule headers and the file trailer belong to ProcessFile.
+		// Push them back before the record callback so they are reported once.
+		if recordCode == "01" || recordCode == "11" || recordCode == "E " {
+			r.pushBackLine(line)
+			return nil
+		}
 
 		// Call record callback if provided
 		if recordCallback != nil {
@@ -539,14 +547,6 @@ func (r *Reader) processSchedulePayments(
 
 		case "T ": // Schedule trailer
 			return nil // End of schedule
-
-		case "01", "11": // Next schedule
-			r.pushBackLine(line)
-			return nil
-
-		case "E ": // File trailer
-			r.pushBackLine(line)
-			return nil
 
 		default:
 			if !r.config.SkipInvalidRecords {
@@ -666,13 +666,8 @@ func (r *Reader) parseACHSchedule(headerLine string) (*ACHSchedule, error) {
 	}
 
 	schedule := &ACHSchedule{
-		Header: header,
-		BaseSchedule: BaseSchedule{
-			ScheduleNumber: strings.TrimSpace(header.ScheduleNumber),
-			PaymentType:    strings.TrimSpace(header.PaymentTypeCode),
-			ALC:            strings.TrimSpace(header.AgencyLocationCode),
-			Payments:       make([]Payment, 0),
-		},
+		Header:       header,
+		BaseSchedule: baseScheduleFromHeader(header.ScheduleNumber, header.PaymentTypeCode, header.AgencyLocationCode),
 	}
 
 	// Read payments until schedule trailer
@@ -762,13 +757,8 @@ func (r *Reader) parseCheckSchedule(headerLine string) (*CheckSchedule, error) {
 	}
 
 	schedule := &CheckSchedule{
-		Header: header,
-		BaseSchedule: BaseSchedule{
-			ScheduleNumber: strings.TrimSpace(header.ScheduleNumber),
-			PaymentType:    strings.TrimSpace(header.PaymentTypeCode),
-			ALC:            strings.TrimSpace(header.AgencyLocationCode),
-			Payments:       make([]Payment, 0),
-		},
+		Header:       header,
+		BaseSchedule: baseScheduleFromHeader(header.ScheduleNumber, header.PaymentTypeCode, header.AgencyLocationCode),
 	}
 
 	// Read payments until schedule trailer
@@ -845,5 +835,15 @@ func (r *Reader) parseCheckSchedule(headerLine string) (*CheckSchedule, error) {
 			}
 			return schedule, nil
 		}
+	}
+}
+
+// baseScheduleFromHeader fills the common schedule fields from a parsed header.
+func baseScheduleFromHeader(scheduleNumber, paymentType, alc string) BaseSchedule {
+	return BaseSchedule{
+		ScheduleNumber: strings.TrimSpace(scheduleNumber),
+		PaymentType:    strings.TrimSpace(paymentType),
+		ALC:            strings.TrimSpace(alc),
+		Payments:       make([]Payment, 0),
 	}
 }
