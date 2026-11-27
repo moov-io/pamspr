@@ -43,8 +43,10 @@ The library supports both **ACH (Automated Clearing House)** and **Check** payme
 
 ## Installation
 
+This library requires Go 1.24.4 or newer.
+
 ```bash
-go get github.com/moov-io/pamspr
+go get github.com/moov-io/pamspr@latest
 ```
 
 Or install the CLI tool:
@@ -64,7 +66,8 @@ import (
     "fmt"
     "log"
     "os"
-    
+    "strings"
+
     "github.com/moov-io/pamspr/pkg/pamspr"
 )
 
@@ -83,12 +86,15 @@ func main() {
         log.Fatal(err)
     }
 
-    // Display file information
-    fmt.Printf("Input System: %s\n", pamFile.Header.InputSystem)
+    // Parsed text fields keep their fixed-width padding.
+    // Use strings.TrimSpace when you display or compare them.
+    fmt.Printf("Input System: %s\n", strings.TrimSpace(pamFile.Header.InputSystem))
     fmt.Printf("Total Payments: %d\n", pamFile.Trailer.TotalCountPayments)
     fmt.Printf("Total Amount: $%.2f\n", float64(pamFile.Trailer.TotalAmountPayments)/100)
 }
 ```
+
+`Read()` parses the file. It does not check that the file balances. After `Read()`, run `Validator.ValidateBalancing` (and `ValidateFileStructure` when you need the full rule set). The writer pads text fields again when it writes a file, so a write after a parse keeps the 850-character record length.
 
 ### Creating an ACH Payment File
 
@@ -96,16 +102,17 @@ func main() {
 package main
 
 import (
+    "fmt"
     "log"
     "os"
-    
+
     "github.com/moov-io/pamspr/pkg/pamspr"
 )
 
 func main() {
     // Build file using fluent API
     builder := pamspr.NewFileBuilder()
-    
+
     file, err := builder.
         WithHeader("MY_AGENCY_SYSTEM", "502", false).
         StartACHSchedule("SCH001", "Salary", "12345678", "PPD").
@@ -113,7 +120,7 @@ func main() {
             AgencyAccountIdentifier:      "EMP001",
             Amount:                       250000, // $2,500.00
             AgencyPaymentTypeCode:        "S",
-            IsTOPOffset:                  "1",
+            IsTOP_Offset:                 "1",
             PayeeName:                    "JOHN DOE",
             PayeeAddressLine1:            "123 MAIN ST",
             CityName:                     "WASHINGTON",
@@ -121,14 +128,24 @@ func main() {
             PostalCode:                   "20001",
             RoutingNumber:                "021000021",
             AccountNumber:                "1234567890",
-            ACHTransactionCode:           "22", // Checking Credit
+            ACH_TransactionCode:          "22", // Checking Credit
             PaymentID:                    "PAY001",
             TIN:                          "123456789",
             PaymentRecipientTINIndicator: "1", // SSN
         }).
         Build()
-    
+
     if err != nil {
+        log.Fatal(err)
+    }
+
+    // Build() calculates trailers. It does not validate business rules.
+    // Run the Validator after Build() before you write the file.
+    validator := pamspr.NewValidator()
+    if err := validator.ValidateFileStructure(file); err != nil {
+        log.Fatal(err)
+    }
+    if err := validator.ValidateBalancing(file); err != nil {
         log.Fatal(err)
     }
 
@@ -154,15 +171,16 @@ func main() {
 package main
 
 import (
+    "fmt"
     "log"
     "os"
-    
+
     "github.com/moov-io/pamspr/pkg/pamspr"
 )
 
 func main() {
     builder := pamspr.NewFileBuilder()
-    
+
     file, err := builder.
         WithHeader("CHECK_SYSTEM", "502", false).
         StartCheckSchedule("CHK001", "Vendor", "87654321", "stub").
@@ -170,7 +188,7 @@ func main() {
             AgencyAccountIdentifier:      "VEND001",
             Amount:                       150000, // $1,500.00
             AgencyPaymentTypeCode:        "V",
-            IsTOPOffset:                  "1",
+            IsTOP_Offset:                 "1",
             PayeeName:                    "ACME CORP",
             PayeeAddressLine1:            "789 BUSINESS BLVD",
             PayeeAddressLine2:            "SUITE 100",
@@ -204,8 +222,18 @@ func main() {
             },
         }).
         Build()
-    
+
     if err != nil {
+        log.Fatal(err)
+    }
+
+    // Build() calculates trailers. It does not validate business rules.
+    // Run the Validator after Build() before you write the file.
+    validator := pamspr.NewValidator()
+    if err := validator.ValidateFileStructure(file); err != nil {
+        log.Fatal(err)
+    }
+    if err := validator.ValidateBalancing(file); err != nil {
         log.Fatal(err)
     }
 
@@ -359,7 +387,7 @@ reader := pamspr.NewReader(file)
 
 err := reader.ProcessPaymentsOnly(func(payment pamspr.Payment, scheduleIndex, paymentIndex int) bool {
     // Process each payment as it's read
-    fmt.Printf("Payment %s: $%.2f\n", payment.GetPaymentID(), float64(payment.GetAmount())/100)
+    fmt.Printf("Payment %s: $%.2f\n", strings.TrimSpace(payment.GetPaymentID()), float64(payment.GetAmount())/100)
     
     // Return false to stop processing early
     return true
@@ -404,13 +432,15 @@ For quick file validation without object creation:
 ```go
 reader := pamspr.NewReader(file)
 
+start := time.Now()
 err := reader.ValidateFileStructureOnly()
 if err != nil {
     log.Printf("File structure invalid: %v", err)
 }
 
+elapsed := time.Since(start)
 stats := reader.GetStats()
-fmt.Printf("Validated %d lines, %d payments in %v\n", 
+fmt.Printf("Validated %d lines, %d payments in %v\n",
     stats.LinesProcessed, stats.PaymentsProcessed, elapsed)
 ```
 
@@ -688,7 +718,8 @@ The library includes specialized validation for all federal agencies with comple
 ### 🎯 **Validation Coverage Status**
 - **100% Format Validation**: All agencies have complete field format validation
 - **Pending Business Rules**: Valid code ranges and payment limits require agency/Treasury input
-- **Production Ready**: All format validation requirements satisfied per Treasury specification
+- **Format validation is complete**: The format checks follow the Treasury specification
+- **Not production-ready for agency submission**: The library does not yet include Treasury-approved business rules or official test files. Without that, it can accept payments that Treasury would reject. Federal agencies cannot use this library in production until that gap is closed.
 
 ## Same Day ACH Support
 
@@ -754,7 +785,7 @@ go test -cover ./...
 go test ./pkg/pamspr/
 
 # Run specific test
-go test -run TestReaderParseFile ./pkg/pamspr/
+go test -run TestReaderBasicFile ./pkg/pamspr/
 
 # Generate coverage report
 go test -coverprofile=coverage.out ./...
@@ -778,7 +809,7 @@ The examples demonstrate:
 
 ## Contributing
 
-We welcome contributions! Please see our [contributing guidelines](CONTRIBUTING.md) for details.
+We welcome contributions! See [DEVELOPMENT.md](DEVELOPMENT.md) and the [Moov contributing guidelines](https://github.com/moov-io/ach/blob/master/CONTRIBUTING.md).
 
 ### Development Setup
 
@@ -791,7 +822,8 @@ cd pamspr
 go test ./...
 
 # Build CLI tool
-go build -o pamspr cmd/pamspr/main.go
+mkdir -p bin
+go build -o bin/pamspr cmd/pamspr/main.go
 
 # Format code
 go fmt ./...
@@ -900,7 +932,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 - **Documentation**: See inline code documentation and examples
 - **Issues**: Report bugs or request features via [GitHub Issues](https://github.com/moov-io/pamspr/issues)
-- **Community**: Join the [Moov Community](https://community.moov.io) for discussions
+- **Community**: Join the [Moov Community](https://slack.moov.io) for discussions
 
 ## Related Projects
 
